@@ -1,0 +1,50 @@
+% clc;
+% close all;
+% clear;
+% bw_range = [15:1:72]; 
+% beam_width_range = [0.1 : 1: 50];
+% room_radius      = [3:1:20]; % [m] 
+% 
+% % Step-1 Compute the Antenna Gain Relative to that of the beam-width
+% G = 10 .* log10((4*pi) ./ (deg2rad(beam_width_range))); %[dB]
+% 
+% % Example throughput values (use your tput_results instead)
+% tput_results = load("tput7.mat").tput_results;
+% t_flat = [];
+% g_flat = [];
+% bw_flat = [];
+% r_flat = [];
+% 
+% 
+% for gain = 1:length(G)
+%     disp(gain)
+%     for bw = 1:length(bw_range)
+%         for rad = 1:length(room_radius)
+%             t_val = tput_results(gain,bw,rad);
+%             t_val = t_val /1e9;
+%               t_flat = [t_flat t_val];
+%               g_flat = [g_flat beam_width_range(gain) ];
+%               bw_flat = [bw_flat bw_range(bw)];
+%               r_flat = [r_flat (2*room_radius(rad))^2];
+% %             scatter3(G(gain), bw_range(bw), (2*room_radius(rad))^2, 50,t_val,'filled');
+% %             hold on;
+%     end
+% end
+% end
+% figure;
+% scatter3(g_flat, bw_flat, r_flat, 30,t_flat,'filled');
+% 
+% % ax = gca;
+% % ax.XDir = 'reverse';
+% view(-31,14)
+% xlabel('Antenna Beanwidth [Degree]')
+% ylabel('Bandwidth [GHz]')
+% zlabel('Room Size [m^2]')
+% 
+% cb = colorbar;                                     % create and label the colorbar
+% cb.Label.String = 'Tput [G
+% bps]';
+% 
+
+
+clck

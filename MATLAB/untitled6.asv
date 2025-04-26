@@ -1,0 +1,21 @@
+bw_range = [15 25 35 55 65 75]; 
+beam_width_range = [0.1 0.5 3 6 12 18];
+room_radius      = [5 10 15 20 25]; % [m] 
+
+
+% Step-1 Compute the Antenna Gain Relative to that of the beam-width
+G = 10 .* log10((4*pi) ./ (deg2rad(beam_width_range))); %[dB]
+
+% Example throughput values (use your tput_results instead)
+tput_results = load("tput.mat").tput_results;
+
+% Prepare 3D bar data
+[X, Y, Z] = meshgrid(beam_width_range, bw_range, room_radius); % Create grids
+
+
+slice(X, Y, Z, temp, xslice, yslice, zslice)    % display the slices
+ylim([-3 3])
+view(-34,24)
+
+cb = colorbar;                                  % create and label the colorbar
+cb.Label.String = 'Temperature, C';

@@ -1,0 +1,55 @@
+clc;
+close all;
+clear;
+
+
+%% link budget
+
+% Define Some Parameters
+f = (252.72 + ((321.84 - 252.72) / 2)) *1e9; %Freq based on ADAPT
+lambda = 3e8 / f;
+bw_1 = 69e9;
+bw_range = [15:1:72]; 
+d_1 = 20; % [meters] , For adapt sim for testing 
+
+beam_width_range = [0.1 : 1: 50];
+room_radius      = [3:1:20]; % [m] 
+lambda_nodes = 0.03;
+T_ia = 350e-6;
+
+% Step-1 Compute the Antenna Gain Relative to that of the beam-width
+G = 10 .* log10((4*pi) ./ (deg2rad(beam_width_range))); %[dB]
+
+tput_results = zeros(length(G), length(bw_range), length(room_radius));
+for gain_index = 1:length(G)
+    gain_index
+    gain_value = G(gain_index);
+    for bandwidth_index = 1:length(bw_range)
+        bandwidth_index
+        bandwidth_value = bw_range(bandwidth_index);
+        d_max_mcs = compute_dmax(bandwidth_value,gain_value,lambda);
+        % Compute the MCS Area : 
+        for room_radius_index = 1:length(room_radius)
+            room_radius_value = room_radius(room_radius_index); % AP in center of the room -> total length of room is room_radius_value ^2
+            MCS_Area_regions = zeros(1,length(d_max_mcs));
+            for d_max_mcs_index = 1:length(d_max_mcs)
+                d_max_mcs_value = d_max_mcs(length(d_max_mcs)-d_max_mcs_index+1); % start from the highest since it will have the region between 0 {closest to AP} to d_max_MCS
+                MCS_AREA = compute_area(d_max_mcs_value,room_radius_value);
+                if(d_max_mcs_index==1)
+                    MCS_Area_regions(length(d_max_mcs)-d_max_mcs_index+1) = MCS_AREA;
+                else
+                    MCS_Area_regions(length(d_max_mcs)-d_max_mcs_index+1) = MCS_AREA - sum(MCS_Area_regions); % The next region should subtract the previous region from it. 
+                end
+                %compute f_t_face: 
+            end %MCS Area Region Index Loop End
+             N_Sectors_value = ceil((2*pi) / (beam_width_range(gain_index)));
+             N_nodes_value   = ceil (lambda_nodes * pi *room_radius_value^2 );
+             if(N_nodes_value > 100 )
+                 N_nodes_value = 100;
+             end
+             tput = compute_lat(f,room_radius_value,N_Sectors_value,N_nodes_value,T_ia, lambda_nodes, MCS_Area_regions,bandwidth_value);
+             tput/1e9
+             tput_results(gain_index, bandwidth_index, room_radius_index) = tput;
+        end % Room Radius Index Loop End
+    end %Bandwidth Index Loop End
+end %Gain Index Loop End 
