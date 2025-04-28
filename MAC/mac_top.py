@@ -239,6 +239,7 @@ class MAC_Controller:
             UE_DEVICE = UE.UE(x,y,MAC_Controller.UE_MAX_RETRANSMISSION,UE_RFBox,lambda_transmission,startTime,simEndTime)
             UE_DEVICE.setupUE()
             UE_DEVICE.connect_to_AP(self.AP)
+            self.UE_List.append(UE_DEVICE)
             MAC_UE_NEW = mac_ue.macUE(UE_DEVICE)
             if(self.control_BW != None):
                 MAC_UE_NEW.ue_device.RFBox.splitBandwidth(self.control_BW, self.data_BW)

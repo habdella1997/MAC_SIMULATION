@@ -15,6 +15,7 @@ import plotter
 import io
 
 def get_lastFolder(base_dir):
+    base_dir = os.path.abspath(base_dir)
     folders = [folder for folder in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, folder))]
     sorted_folders = sorted(folders, reverse=True)
     if not sorted_folders:
@@ -24,6 +25,7 @@ def get_lastFolder(base_dir):
 
 
 def load_latest_transmission_logs(base_dir,file_name):
+    base_dir = os.path.abspath(base_dir)
     folders = [folder for folder in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, folder))]
     sorted_folders = sorted(folders, reverse=True)
     if not sorted_folders:

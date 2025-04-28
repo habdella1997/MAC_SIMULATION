@@ -7,7 +7,9 @@ from Objects import UE
 from Objects import AP
 class Logger:
     def __init__(self):
-        logs_dir = "Logs/UE_LOG"
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))     
+        # Now create Logs/PacketTrace inside project_root
+        logs_dir = os.path.join(project_root, "Logs", "UE_LOG")
         if not os.path.exists(logs_dir):
             os.makedirs(logs_dir)
         # Create a sub-folder based on the current date and time
@@ -30,7 +32,8 @@ class Logger:
 
 
     def write_UE_attr(self, ue_list):
-        for ue in ue_list:
+        for ue2 in ue_list:
+            ue = ue2.ue_device
         # Construct the filename based on the UE id
             filename = os.path.join(self.topLevelFolder, f"UE_{ue.id}.txt")
             with open(filename, 'w') as file:

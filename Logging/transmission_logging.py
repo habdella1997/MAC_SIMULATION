@@ -5,7 +5,11 @@ from datetime import datetime
 from Objects import transmission2
 class Logger:
     def __init__(self):
-        logs_dir = "Logs/PacketTrace"
+         # Move up one directory from current script location
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))     
+
+        # Now create Logs/PacketTrace inside project_root
+        logs_dir = os.path.join(project_root, "Logs", "PacketTrace")
         if not os.path.exists(logs_dir):
             os.makedirs(logs_dir)
         # Create a sub-folder based on the current date and time

@@ -21,7 +21,7 @@ room_l,room_w,room_h = 26.6,26.6,0
 
 # Setup UE Parameters
 UE_TX_Power             = 0.1 #Watts
-maxNumUEDevices         = 50
+maxNumUEDevices         = 5
 UE_Device_Density       = 0.1
 UE_UL_interarrival_time = 800e-6
 UE_BeamWidth = 1
@@ -146,7 +146,7 @@ if (plot_avg_tput):
         avg_tput_data.append(avg_tput)
     plotter.results_create_line_plot( inter_arrival_time,avg_tput_data, "Inter-Arrival Time [us]", "Avg. Tput [Gbps]", "Tput Fixed Node Density 0.05 nodes/m^2", None,"OMNIResults")
 else:
-    system_time   = [x*time_scale  for x in range(0,200)]#200 + int(UE_UL_interarrival_time*0.4))]
+    system_time   = [x*time_scale  for x in range(0,100)]#200 + int(UE_UL_interarrival_time*0.4))]
     startTime = int(len(system_time) * 0.2)
     MAC_Results,NLoSReflections = MACSIMULATION.setupMAC(number_AP, 
                                                          UE_Device_Density, 
@@ -188,4 +188,4 @@ else:
         plt.close()
     from Logging import ue_logging
     UE_LOGGER = ue_logging.Logger()
-    UE_LOGGER.write_UE_attr(UE_list)
+    UE_LOGGER.write_UE_attr(MACUE_devices)

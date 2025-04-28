@@ -39,7 +39,10 @@ class Results_Data:
 
 class Results:
     def __init__(self):
-        logs_dir = "Results"
+         # Move up one directory from current script location
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
+        # Now create Logs/PacketTrace inside project_root
+        logs_dir = os.path.join(project_root, "Results")
         if not os.path.exists(logs_dir):
             os.makedirs(logs_dir)
         # Create a sub-folder based on the current date and time
@@ -136,13 +139,13 @@ class Results:
             grouped_data[uid]['latencies'].append(latency)
             grouped_data[uid]['data_rates'].append(data_rate)
         
-        # for uid, data in grouped_data.items():
-        #     user_latencies = np.array(data['latencies'])
-        #     user_data_rates = np.array(data['data_rates'])
-        #     user_throughput = PAYLOADSIZE / user_latencies
-        #     self.setup_ue_perf(uid,"Latency", user_latencies*(1e3), 'Measurement Index', 'Latency (ms)', f"Latencies for User {uid}", f"User {uid} Latency")
-        #     self.setup_ue_perf(uid, "Data Rate",user_data_rates/(1e9), 'Measurement Index', 'Data Rate (Gbps)',f"Data Rates for User {uid}", f"User {uid} Data Rate")
-        #     self.setup_ue_perf(uid, "Throughput",user_throughput/(1e9), 'Measurement Index', 'Throughput (Gbps)',f"Throughput for User {uid}", f"User {uid} Throughput")
+        for uid, data in grouped_data.items():
+            user_latencies = np.array(data['latencies'])
+            user_data_rates = np.array(data['data_rates'])
+            user_throughput = PAYLOADSIZE / user_latencies
+            self.setup_ue_perf(uid,"Latency", user_latencies*(1e3), 'Measurement Index', 'Latency (ms)', f"Latencies for User {uid}", f"User {uid} Latency")
+            self.setup_ue_perf(uid, "Data Rate",user_data_rates/(1e9), 'Measurement Index', 'Data Rate (Gbps)',f"Data Rates for User {uid}", f"User {uid} Data Rate")
+            self.setup_ue_perf(uid, "Throughput",user_throughput/(1e9), 'Measurement Index', 'Throughput (Gbps)',f"Throughput for User {uid}", f"User {uid} Throughput")
                 
             
 
@@ -162,12 +165,12 @@ class Results:
         avg_throughput_across_all_val = np.mean(avg_throughput_across_all) / (1e9)
 
         # # Histogram of average latencies
-        # latency_file_path = self.setup_avg_perf("Latency")
-        # data_file_path    = self.setup_avg_perf("Data Rate")
-        # thruput_file_path = self.setup_avg_perf("Throughput")
+        latency_file_path = self.setup_avg_perf("Latency")
+        data_file_path    = self.setup_avg_perf("Data Rate")
+        thruput_file_path = self.setup_avg_perf("Throughput")
         
-        # avg_latency_hist    = plotter.results_create_histogram_plot(uid_list, avg_latencies, 'Measurement Index','Average Latency (ms)','Histogram of Average Latency Across All Users',latency_file_path)
-        # avg_data_rate_hist  = plotter.results_create_histogram_plot(uid_list, avg_data_rates, 'Measurement Index','Average Data Rate (Gbps)', 'Histogram of Average Data Rate Across All Users',data_file_path)
-        # avg_throughput_hist = plotter.results_create_histogram_plot(uid_list, avg_throughputs, 'Measurement Index', 'Average Throughput (Gbps)','Histogram of Average Throughput Across All Users',thruput_file_path)
+        avg_latency_hist    = plotter.results_create_histogram_plot(uid_list, avg_latencies, 'Measurement Index','Average Latency (ms)','Histogram of Average Latency Across All Users',latency_file_path)
+        avg_data_rate_hist  = plotter.results_create_histogram_plot(uid_list, avg_data_rates, 'Measurement Index','Average Data Rate (Gbps)', 'Histogram of Average Data Rate Across All Users',data_file_path)
+        avg_throughput_hist = plotter.results_create_histogram_plot(uid_list, avg_throughputs, 'Measurement Index', 'Average Throughput (Gbps)','Histogram of Average Throughput Across All Users',thruput_file_path)
         
         return avg_throughput_across_all_val
