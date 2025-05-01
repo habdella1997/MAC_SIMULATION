@@ -16,12 +16,9 @@ class UL_GRANT:
 
 class Packet:
     sequence_id = 0  # Class variable to keep track of sequence IDs
-    
     CONTROL_PACKET_LENGTH = 0
     CONTROL_PACKET_RATE   = 0
-
     CONTROL_PACKET_RTS_RATE = 0
-
     DATA_PACKET_LENGTH = 0
     
     def __init__(self, linkDirection, sender, recipient, packetType, packetDEF):
@@ -54,14 +51,8 @@ class CTA(Packet):
         self.recipient = self.recipient + str(id) + ','
     def setupTransmissionDelay(self):
         self.transmissionDelay = channel.compute_transmissionTime(self.length, self.rate)
-    def setupPropagationDelay(self, distance, ueID):
-        propagationDelay = channel.compute_propagationDelay(distance)
-        self.propagationDelay.append(propagationDelay)
-        self.timeStampArrival_UEID.append(ueID)
     def settimeStampTransmission(self,currentTime):
         self.timeStampTransmission = currentTime
-    def settimeStampArrival(self,time):
-        self.timeStampArrival.append(time)
     def setupWaitTime(self, time):
         self.waitTime = time
 

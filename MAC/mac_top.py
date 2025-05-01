@@ -23,9 +23,9 @@ import random
 class MAC_Controller:
     # Misc Control Params
     AP_STARTING_SECTOR        = 0     # Sector in which AP begin upon start of simulation 
-    BOUNDARY_OF_ROOM          = 0.4   # Used to limit the loaction of UE handset to not be very close or on the room edge 
-    UE_MAX_RETRANSMISSION     = 10  # Limits the number of Transmissions
-    SectorTransitionTimeDelay =  0#1*(10**-9)  #2 *(10**-6) # [nS] time to move from one sector to another 
+    BOUNDARY_OF_ROOM          = 0.1   # Used to limit the loaction of UE handset to not be very close or on the room edge 
+    UE_MAX_RETRANSMISSION     = 10    # Limits the number of Transmissions
+    SectorTransitionTimeDelay =  0    #1*(10**-9)  #2 *(10**-6) # [nS] time to move from one sector to another 
 
     #Packet Params
     CONTROL_PACKET_SIZE  = 24    #bytes
@@ -78,10 +78,6 @@ class MAC_Controller:
         self.reuseSetup          = False #used for allowing simulator to reuse the setup UE from previous simulation (cuts time)
         self.fixedUEObject       = None  #stores the UE objects;
 
-    
-    def return_ue_coordinates(self):
-        return self.ue_coordinates
-
     # TOP LEVEL Function for seting up the MAC
     # NumAP : Number of AP units: Currently only supporting one AP per simulation
     # numUE : Number of UE units
@@ -92,8 +88,6 @@ class MAC_Controller:
     # UE_uplinkTransmissionRate: The transmission rate of UE. Used to compute the transmission time. A higher value means the UE will be more likely to transmit a packet.  
     def setupMAC(self,numAP, lambda_density, AP_BeamWidth,UE_BeamWidth, UE_Power, AP_Power,frequency, lambda_transmission,startTime,simEndTime,logger:Logger,reflectors):
         if(self.reuseSetup):
-            print("Number of devices: ")
-            print(len(self.MACUEDevices))
             self.setup_devices_previous_run(self.AP, self.MACUEDevices, lambda_transmission)
         else:
             self.setup_devices(numAP, lambda_density, AP_BeamWidth,UE_BeamWidth, UE_Power, AP_Power,frequency, lambda_transmission, startTime,simEndTime)
@@ -108,37 +102,8 @@ class MAC_Controller:
         else:
             MAC_results,NLoSReflections = self.macOmni(logger,simEndTime)
         return MAC_results,NLoSReflections
-
-    def collision_detection_ul(self,packets):
-        packets_dropped = []
-        packets_success = []
-
-        for packet in packets:
-            success = True
-            arrival_time  = packet.timeStampArrival
-            transmit_time = packet.timeStampTransmission
-            for next_packet in packets:
-                if (next_packet == packet):
-                    continue
-                if(transmit_time < next_packet.timeStampTransmission):
-                    if(arrival_time <= next_packet.timeStampTransmission):
-                        continue # no collision here
-                elif(transmit_time > next_packet.timeStampTransmission):
-                    if(transmit_time >= next_packet.timeStampArrival):
-                        continue
-                else: 
-                    pass
-                success = False
-                break
-            if(success):
-                packets_success.append(packet)
-            else:
-                packets_dropped.append(packet)
-        return packets_dropped,packets_success
-    
-    
  
-    def collision_detection_ul2(self,packets,MESSAGES_Logging):
+    def collision_detection_ul(self,packets,MESSAGES_Logging):
         if(len(packets) == 1):
             return [],packets
         
@@ -270,9 +235,7 @@ class MAC_Controller:
         control_length_encoded   = math.ceil(control_packet_length / MAC_Controller.FEC_NUMERATOR) * MAC_Controller.FEC_DENOMINATOR
         payload_length_encoded   = math.ceil(data_packet_length / MAC_Controller.FEC_NUMERATOR) * MAC_Controller.FEC_DENOMINATOR
 
-        control_transmission_rate     = 0 
-        control_transmission_rate_RTS = 0
-        
+        control_transmission_rate     = 0         
         if(self.mac_protocol == constants.omniMacLabel and self.control_BW != None):
             control_transmission_rate =  self.control_BW     * self.CONTROL_PACKET_BEFF
         else:
@@ -446,7 +409,7 @@ class MAC_Controller:
 
 
 
-    def setup_RTS_packets(self,sectorEndTime, linkType,MESSAGES_Logging,MAC_UEDEVICES,CTA_PACKET,MACAP,simRoom, numOfRequestesPermitted = None):
+    def setup_RTS_packets(self,sectorEndTime, linkType,MESSAGES_Logging,MAC_UEDEVICES,CTA_PACKET,MACAP,simRoom, numOfRequestesPermitted = None): # Verified - Hussam
         MACUE_devices_withTransmission_Request = []
         RTS_PACKETS = []
         if(linkType == constants.LoS):
@@ -493,8 +456,7 @@ class MAC_Controller:
                     else:
                         pass
         else:
-            for device in MAC_UEDEVICES: #check_Transmission_Capbaility(self,time_window_right,apSector, linkType):
-                    # random_time_for_RTS = math_toolkit.random_uniform_between(device.lastCTA_ArrivalTime, RTS_endTime)
+            for device in MAC_UEDEVICES: 
                     if(device.check_Transmission_Capbaility(sectorEndTime,MACAP.currentSector,constants.NLoS,MACAP,simRoom,MESSAGES_Logging)):
                         device.process_CTA_packet(CTA_PACKET) #Not actually receiving a CTA, but need it to flush the MACUE system-removing this will impact the MAC ue NloS Transmission time           
                         MESSAGES_Logging.append("NLoS For UE ID: " + str(device.ue_device.id) + "and has something to transmit")        
@@ -518,7 +480,7 @@ class MAC_Controller:
         return RTS_PACKETS,MACUE_devices_withTransmission_Request
 
 
-    def setup_CTS_packets(self,RTS_PACKETS,MESSAGES_Logging,MACAP):
+    def setup_CTS_packets(self,RTS_PACKETS,MESSAGES_Logging,MACAP): #Verified - Hussam
         CTS_PACKET = None
         if(len(RTS_PACKETS)>0):
             if(self.mac_protocol == constants.omniMacLabel):
@@ -555,9 +517,7 @@ class MAC_Controller:
         return ACK_Packets 
     
 
-
-
-    def handle_RTS_Collisions(self, collided_packets, MACUE_Devices):
+    def handle_RTS_Collisions(self, collided_packets, MACUE_Devices, sectorEndTime): #Verified - Hussam {Can be optimized to scale w/ increasing number of devices O(n^2) -> O(n)}
         new_RTS_packets = [] 
         for mac_ue_device in MACUE_Devices:
             for rts_packet in collided_packets: 
@@ -566,6 +526,8 @@ class MAC_Controller:
                     wait_time_before_collision_awarness = (2*rts_packet.transmissionDelay + 2*rts_packet.propagationDelay)
                     transmission_time_of_rts     = rts_packet.timeStampTransmission
                     new_transmission_time_of_rts = transmission_time_of_rts + wait_time_before_collision_awarness + mac_ue_device.compute_RANDOMBACKOFF_time()
+                    if(new_transmission_time_of_rts < sectorEndTime):
+                        continue
                     rts_packet.timeStampTransmission = new_transmission_time_of_rts
                     rts_packet.settimeStampArrival()
                     new_RTS_packets.append(rts_packet)
@@ -592,7 +554,7 @@ class MAC_Controller:
         
         #Simulation LOOP Variables
         simulationTotalTimeElapsed = 0
-        if(self.control_BW!= None):
+        if(self.control_BW != None):
             self.AP.RFBox.splitBandwidth(self.control_BW, self.data_BW)
         MACAP = mac_ap.macAP(self.AP,apSector)
 
@@ -614,7 +576,6 @@ class MAC_Controller:
             utilities.print_status(simulationTotalTimeElapsed,endTime)
             PACKETS_Logging  = []
             MESSAGES_Logging = [] 
-            #new Sector: Send CTA
             sector_start_time = simulationTotalTimeElapsed
             
             MESSAGES_Logging.append("Simulation Iteration Number: " + str(simulation_iteration_counter))
@@ -650,8 +611,8 @@ class MAC_Controller:
             
             MAC_Results.add_sector_activity_RTS(MACAP.currentSector, len(RTS_PACKETS))
             
-            # Now we have all the RTS PACKETS. Lets drop the ones with collosions 
-            RTS_DROPPED,RTS_SUCCESS = self.collision_detection_ul2(RTS_PACKETS,MESSAGES_Logging)
+            # Now we have all the RTS PACKETS. Lets drop the ones with collisions 
+            RTS_DROPPED,RTS_SUCCESS = self.collision_detection_ul(RTS_PACKETS,MESSAGES_Logging)
             RTS_Failures += len(RTS_DROPPED)
             Total_RTS    += len(RTS_PACKETS)
             
@@ -659,17 +620,17 @@ class MAC_Controller:
             
             MAC_Results.add_collision_RTS(len(RTS_DROPPED),len(RTS_PACKETS) )
             RTS_PACKETS = RTS_SUCCESS
-            PROCESSED_RTS_PACKETS = self.handle_RTS_Collisions(RTS_DROPPED, MACUE_devices_withTransmission_Request)
+            PROCESSED_RTS_PACKETS = self.handle_RTS_Collisions(RTS_DROPPED, MACUE_devices_withTransmission_Request, sector_start_time+Sector_Time)
             re_transmission_counter =0
             while(len(PROCESSED_RTS_PACKETS) > 0):
                 re_transmission_counter +=1
                 RTS_PACKETS = RTS_PACKETS + PROCESSED_RTS_PACKETS
-                RTS_DROPPED,RTS_SUCCESS = self.collision_detection_ul2(RTS_PACKETS,MESSAGES_Logging)
+                RTS_DROPPED,RTS_SUCCESS = self.collision_detection_ul(RTS_PACKETS,MESSAGES_Logging)
                 MAC_Results.add_collision_RTS(len(RTS_DROPPED),len(RTS_PACKETS) )
                 RTS_PACKETS = RTS_SUCCESS
                 MESSAGES_Logging.append("Re-Transmission Attempt: " + str(re_transmission_counter))
                 MESSAGES_Logging.append("Total RTS Packets: " + str(len(RTS_PACKETS)) + ", Dropped RTS packets: " + str(len(RTS_DROPPED)))  
-                PROCESSED_RTS_PACKETS = self.handle_RTS_Collisions(RTS_DROPPED,MACUE_devices_withTransmission_Request)
+                PROCESSED_RTS_PACKETS = self.handle_RTS_Collisions(RTS_DROPPED,MACUE_devices_withTransmission_Request,sector_start_time+Sector_Time)
 
             CTS_PACKET = self.setup_CTS_packets(RTS_PACKETS,
                                                 MESSAGES_Logging,

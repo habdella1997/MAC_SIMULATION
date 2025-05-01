@@ -31,7 +31,7 @@ def max_distance(p_tx, bandwidth, antenna_gain,ue_gain, f_c):
 
 
 
-def link_budget(p_tx, distance, max_bandwidth, antenna_gain, f_c, abs_loss):
+def link_budget(p_tx, distance, max_bandwidth, antenna_gain, f_c, abs_loss): #verified - hussam
     p_tx = 10 * math.log10(p_tx)
     lambda_fc = C.SPEED_OF_LIGHT / f_c
 
@@ -39,44 +39,28 @@ def link_budget(p_tx, distance, max_bandwidth, antenna_gain, f_c, abs_loss):
     L_total = 2*L_mixer + L_misc + abs_loss + spreading_loss
 
 
-    # NF = 10 * math.log10(10 ** (NF_mixer / 10) + (10 ** (NF_LNA / 10) - 1) / 10 ** (G_LNA / 10))
-    NF = 10 * math.log10(
-        10**(NF_LNA / 10) + (10**(NF_mixer / 10) - 1) / 10**(G_LNA / 10)
-    )
+    NF = 10 * math.log10(10 ** (NF_mixer / 10) + (10 ** (NF_LNA / 10) - 1) / 10 ** (G_LNA / 10))
+  
+    modulation_table =     [ "QPSK"   , "8-PSK"  , "16-QAM" , "64-QAM" ]
+    B_efficiencies = [ 2   , 3  , 4    , 6   ]
+    Eb_N0_min      = [ 10.6, 14 , 14.5 , 18.8]
 
-    modulation_table =     ["BPSK", "QPSK" , "8-PSK" , "16-QAM" , "64-QAM", "256-QAM"]
-    data_rateieee        = [52.4e9 , 105.3e9 , 157.4e9, 210.2e9, 315.4e9   ]
-
-    B_efficiencies = [1,      2,     3,   4,    6, ]
-    Eb_N0_min = [    10.6,   10.6,   14, 14.5,18.8]
-    Eb_N0_adj = [10.6, 12.4, 17.6,19.2,25.4]
-    data_rate = None
-    max_data_rate = 0
+    data_rate         = None
+    max_data_rate     = 0
     modulation_scheme = None
-    p_r = 0
-    No = 1.9e-17
-    # P_n = 30 + 10*math.log10(No*max_bandwidth)
-    P_n = 10 * math.log10(C.BOLTZMAN * C.T * (max_bandwidth)) + 30
-    p_rx = p_tx + antenna_gain+G_LNA - L_total
+
+    P_n  = 10 * math.log10(C.BOLTZMAN * C.T * (max_bandwidth)) + 30 #[dBm]
+    p_rx = (p_tx + antenna_gain + G_LNA) - L_total
+
     SNR_Computed  = p_rx - (P_n + NF)
-    ber = 10^-6
-    indexer = -1 
+
     for i in range(len(B_efficiencies)):
-        B_eff = B_efficiencies[i]
-        Eb_N0 = Eb_N0_min[i]
-        EbNo_computed = SNR_Computed #+ 10*math.log10(1/B_eff)
-        # print("EBN0 ")
-        # print(EbNo_computed)
-        if(EbNo_computed > Eb_N0_adj[i]):
-            data_rate = (max_bandwidth * B_eff) 
+        EbNo_computed = SNR_Computed - (10 * math.log10(B_efficiencies[i]))
+        if(EbNo_computed >= Eb_N0_min[i]):
+            data_rate = (max_bandwidth * B_efficiencies[i]) 
             if data_rate > max_data_rate:
                 max_data_rate = data_rate
                 modulation_scheme = modulation_table[i]
-                indexer = i
-    # if(max_data_rate != None):
-    #     max_data_rate = max_data_rate 
-    
-    # max_data_rate = data_rateieee[i] #* 0.95
     return p_rx, max_data_rate, SNR_Computed, modulation_scheme
 
 

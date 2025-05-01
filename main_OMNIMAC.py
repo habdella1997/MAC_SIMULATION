@@ -13,7 +13,7 @@ import MirrorConfigs.Multi_Layer_Mirror_Setup.upperhorizontal as upperhorizontal
 import MirrorConfigs.Multi_Layer_Mirror_Setup.lowerhorizontal as lowerhorizontal 
 
 
-Clean_up.cleanup.delete_old_folders()
+# Clean_up.cleanup.delete_old_folders()
 
 # Setup Room Parameters
 room_l,room_w,room_h = 26.6,26.6,0

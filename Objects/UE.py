@@ -20,9 +20,9 @@ class UETransmission:
     Failed_MSG5 = "Failure Unknown - Debug Needed"
 
     def __init__(self, max_reTransmissions):
-        self._transmission_time = deque()
-        self._transmission_time_record = []
-        self.transmission_IDList = [] #Generates a internal id for every application layer transmission instance to track packets
+        self._transmission_time = deque()       # A Qeue to hold the transmission time of the UL packets {pop one during transmission}
+        self._transmission_time_record = []     # A Record of all the times a UE wanted to transmit. (Remains un-altered throughout the simulation)
+        self.transmission_IDList = []           #Generates a internal id for every application layer transmission instance to track packets
 
         self.Logs_ActualTransmissionTime = []
         self.Logs_AppTransmissionTime    = []
@@ -33,20 +33,20 @@ class UETransmission:
         self.Logs_Status                 = []
         self.Logs_APSector               = []
 
-        self.pending_transmission_SeqID   = [] # holds the pending internal APP layer UL ID
-        self.pending_transmission_AppTime = [] # holds the pending internal APP layer UL transmission time
+        self.pending_transmission_SeqID    = [] # holds the pending internal APP layer UL ID
+        self.pending_transmission_AppTime  = [] # holds the pending internal APP layer UL transmission time
         self.pending_transmission_ULPacket = [] # holds the pending global UL Packet 
         
-        self.numberOfReTransmissions = None
+        self.numberOfReTransmissions = {} # Holds the number of retransmissions for each UL packet.
 
-    def set_transmission_time(self, time):
+    def set_transmission_time(self, time): #Verified
         self._transmission_time        = deque(time) #Every time a transmission occurs we pop the left most item. 
         self._transmission_time_record = time # Remains un-altered throughout the simulation.
         APPSeqIDLIST                   = [x for x in range(len(time))]
         self.transmission_IDList = deque(APPSeqIDLIST)
         self.numberOfReTransmissions = {key: 0 for key in APPSeqIDLIST}
     
-    def check_earliest_transmission(self):
+    def check_earliest_transmission(self): #Verified. 
         return self._transmission_time[0]
     
     def empty(self):
@@ -164,7 +164,7 @@ class UE:
         self.distanceToAP = -1
         self.propagationDelay = -1
     
-    def check_number_packets(self,endTime):
+    def check_number_packets(self,endTime): #Verified.
         #Function to check how many packets can be transmitted before a certain time instant. 
         UL_Requests_pending = self.UE_TRANSMISSIONS.transmission_time
         time_instances = []
@@ -188,17 +188,11 @@ class UE:
         appTransTime, appSeqID = self.UE_TRANSMISSIONS.pending_transmission()
 
 
-    def check_for_transmission(self,current_time):
-        # return math_toolkit.binary_search(self.transmission_time,current_time)
-        if (not(self.check_transmission_queue()) and self.UE_TRANSMISSIONS.check_earliest_transmission() <= current_time):
-            return True
-        return False 
-    
-    def check_transmission_queue(self):
-        if(len(self.UE_TRANSMISSIONS.transmission_time) == 0):
-            return True #empty
+    def check_for_transmission(self,current_time): #Verified. 
+        if(len(self.UE_TRANSMISSIONS.transmission_time) > 0 and self.UE_TRANSMISSIONS.check_earliest_transmission() <= current_time):
+            return True #There is a packet to transmit
         return False
-
+    
     def transmission_succesful(self,ulPacketSequencID,APSector):
         transmission_time_intiated, UL_packet = self.UE_TRANSMISSIONS.transmit_success(ulPacketSequencID,APSector)
         return transmission_time_intiated,UL_packet

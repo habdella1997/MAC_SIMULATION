@@ -38,9 +38,11 @@ class macUE:
         self.NLoS_p_rx           = [None for x in range(UE.AP.number_of_sectors)]
         self.NLoS_max_data_rate  = [None for x in range(UE.AP.number_of_sectors)]
         self.NLoS_total_distance = [None for x in range(UE.AP.number_of_sectors)]
+        self.NLoS_modScheme      = [None for x in range(UE.AP.number_of_sectors)]
         self.NLoS_Setup          = [False for x in range(UE.AP.number_of_sectors)]
         self.NLoS_init           = False 
-    
+        self.NLoS_SNR            = [None for x in range(UE.AP.number_of_sectors)]
+
     def update_sector(self):
         # Updates the sector in which UE is in. 
         # Needs to be called at every step in the simulation in case of UE movement. 
@@ -94,8 +96,7 @@ class macUE:
     def OmniMAC_RTSTransmissionTime(self,endtime,startPercentage):
         return math_toolkit.random_uniform_between(endtime*startPercentage,endtime)
     
-    def process_RTS_collision(self, linkType):
-        #if(linkType ==constants.LoS):
+    def process_RTS_collision(self, linkType): #verified - Hussam
         self.retransmissions = self.retransmissions + 1    
 
         
@@ -103,36 +104,36 @@ class macUE:
     def check_done_transmissions(self):
         return self.ue_device.check_transmission_queue()
 
-    def compute_RANDOMBACKOFF_time(self):
+    def compute_RANDOMBACKOFF_time(self): #verified - Hussam
         return math_toolkit.random_uniform_between(macUE.RANDOM_BACKOFF_MINTIME,macUE.RANDOM_BACKOFF_MAXTIME) + (math_toolkit.random_uniform_between(0,2**self.retransmissions)*1e-9)
 
-    def create_RTS_Packet(self,linkType,transmissionInstance,currentSector,prevRTSPacket): #UL_timeTable for MACHUSSAM -> need to integrate into ADAPT
+    def create_RTS_Packet(self,linkType,transmissionInstance,currentSector,prevRTSPacket): #Verified - Hussam
         timeAdvance = 0
-        small_time_delta = 2e-9
+        small_time_delta = 1e-9
         #Avoid collision between the last RTS I sent, and the current RTS im about to send. 
         randomBackoffTime = self.compute_RANDOMBACKOFF_time()
         if(prevRTSPacket != None):
-            if(transmissionInstance <= (prevRTSPacket.timeStampTransmission + prevRTSPacket.transmissionDelay + randomBackoffTime)):
-                timeAdvance = (prevRTSPacket.timeStampTransmission + prevRTSPacket.transmissionDelay+ small_time_delta) - transmissionInstance
+            if(transmissionInstance + randomBackoffTime <= (prevRTSPacket.timeStampTransmission + prevRTSPacket.transmissionDelay)):
+                timeAdvance = prevRTSPacket.timeStampTransmission + prevRTSPacket.transmissionDelay + small_time_delta 
         RTS_packet = None
-        actual_transmissionTime = transmissionInstance + timeAdvance + randomBackoffTime
+        actual_transmissionTime = timeAdvance + randomBackoffTime
 
         if linkType == constants.LoS:
             RTS_packet = RTS(self.ue_device.id, self.ue_device.AP.id,linkType)
             RTS_packet.setupTransmissionDelay()
             RTS_packet.setupPropagationDelay(self.distanceToAP)
-            p_rx, max_data_rate, ber, modulation_scheme = -1,-1,-1,None
+            p_rx, max_data_rate, SNR, modulation_scheme = -1,-1,-1,None
             RTS_packet.settimeStampTransmission(actual_transmissionTime)
             RTS_packet.settimeStampArrival()
             if(self.ue_device.RFBox.splitBandwidthValid):
-                p_rx, max_data_rate, ber, modulation_scheme = channel.link_budget(self.ue_device.RFBox.power, 
+                p_rx, max_data_rate, SNR, modulation_scheme = channel.link_budget(self.ue_device.RFBox.power, 
                                                                                   self.distanceToAP, 
                                                                                   self.ue_device.AP.RFBox.dataBandwidth, 
                                                                                   self.ue_device.RFBox.gain +self.ue_device.AP.RFBox.gain , 
                                                                                   self.ue_device.AP.RFBox.frequency, 
                                                                                   0)
             else:
-                p_rx, max_data_rate, ber, modulation_scheme = channel.link_budget(self.ue_device.RFBox.power, 
+                p_rx, max_data_rate, SNR, modulation_scheme = channel.link_budget(self.ue_device.RFBox.power, 
                                                                                   self.distanceToAP, 
                                                                                   self.ue_device.AP.RFBox.bandwidth, 
                                                                                   self.ue_device.RFBox.gain +self.ue_device.AP.RFBox.gain , 
@@ -142,7 +143,6 @@ class macUE:
             RTS_packet.setupLinkBudget(p_rx,max_data_rate, modulation_scheme)
             RTS_packet.setupULDuration(max_data_rate)
         else:
-            # Need to move this to the AP, The RTS is sent, an AP decides the UL grant, the sector it will be in, and from there it should estimate the data-rate-
             NLoS_Signal_highest   = self.NLoS_Signal[currentSector]
             max_data_rate_highest = self.NLoS_max_data_rate[currentSector]
             distance              = self.NLoS_total_distance[currentSector]
@@ -153,20 +153,16 @@ class macUE:
             RTS_packet = RTS(self.ue_device.id, self.ue_device.AP.id,linkType)
             RTS_packet.setupTransmissionDelay()
             RTS_packet.setupPropagationDelay(distance)
-            # this could cause collisons, if two consecutive links are drastically different in distance. Very unlikely but look into it later. 
             RTS_packet.settimeStampTransmission(actual_transmissionTime)
             RTS_packet.settimeStampArrival()
      
-            RTS_packet.setupLinkBudget(self.NLoS_p_rx[currentSector],max_data_rate_highest, "Na.")
+            RTS_packet.setupLinkBudget(self.NLoS_p_rx[currentSector],max_data_rate_highest, self.NLoS_modScheme[currentSector])
             RTS_packet.setupULDuration(max_data_rate_highest)
         RTS_packet.numberOfGrantsNeeded = 1
         return RTS_packet
         
     
-    def create_ULDATA_Packet(self,linkType,currentSector,timeForTransmission,dataRate):
-        # URGENTBUG - NEED TO TAKE THE TIME SLOT TO BE AFTER NEEDING TO TRANSMIT. 
-        # THE WAY THIS IS CODED -> THE TIME SLOT ASSIGNED COULD POTENTIALLY BE BEFORE THE
-        # UE EVEN REALIZED THAT IT HAS ANYTHIGN TO SEND.!.!!!!!!!!!!!!!!!!!!!!
+    def create_ULDATA_Packet(self,linkType,currentSector,timeForTransmission,dataRate): # Verified - Hussam
         NLoS_Signal = None
         UL_DATA_PACKET = UL_DATA(self.ue_device.id, self.ue_device.AP.id,linkType)
         UL_DATA_PACKET.setupTransmissionDelay(dataRate)
@@ -186,7 +182,7 @@ class macUE:
     def setupNLoSLinks_helper(self,AP,currentSector,simRoom):
         # Step 1: Get Mirrors in my FoV
         my_mirrors = simRoom.mirrors_with_coverage(self.ue_device,currentSector)
-        p_rx_highest, max_data_rate_highest, ber_highest,total_distance_highest= -1,-1,-1,-1
+        p_rx_highest, max_data_rate_highest, SNR_Highest,total_distance_highest= -1,-1,-1,-1
         NLoS_Signal_highest = None
         
         if(my_mirrors):
@@ -206,16 +202,16 @@ class macUE:
                                                                       AP.yCor )
                 total_distance = incidence_distane+reflection_distance
 
-                p_rx, max_data_rate, ber, modulation_scheme = -1,-1,-1,None
+                p_rx, max_data_rate, SNR, modulation_scheme = -1,-1,-1,None
                 if(self.ue_device.RFBox.splitBandwidthValid):
-                    p_rx, max_data_rate, ber, modulation_scheme = channel.link_budget(  self.ue_device.RFBox.power, 
+                    p_rx, max_data_rate, SNR, modulation_scheme = channel.link_budget(  self.ue_device.RFBox.power, 
                                                                                         total_distance, 
                                                                                         self.ue_device.AP.RFBox.dataBandwidth, 
                                                                                         self.ue_device.RFBox.gain +self.ue_device.AP.RFBox.gain , 
                                                                                         self.ue_device.AP.RFBox.frequency, 
                                                                                         0)
                 else:
-                    p_rx, max_data_rate, ber, modulation_scheme = channel.link_budget(  self.ue_device.RFBox.power, 
+                    p_rx, max_data_rate, SNR, modulation_scheme = channel.link_budget(  self.ue_device.RFBox.power, 
                                                                                         total_distance, 
                                                                                         self.ue_device.AP.RFBox.bandwidth, 
                                                                                         self.ue_device.RFBox.gain +self.ue_device.AP.RFBox.gain , 
@@ -224,7 +220,7 @@ class macUE:
                 if(max_data_rate>max_data_rate_highest):
                     p_rx_highest = p_rx
                     max_data_rate_highest = max_data_rate
-                    ber_highest = ber
+                    SNR_Highest = SNR
                     modulation_scheme_highest = modulation_scheme
                     NLoS_Signal_highest = NLoS_Signal
                     total_distance_highest = total_distance
@@ -235,8 +231,9 @@ class macUE:
         self.NLoS_Setup[currentSector] = True
         self.NLoS_Signal[currentSector] = NLoS_Signal_highest
         self.NLoS_total_distance[currentSector] = total_distance_highest
-        
-    
+        self.NLoS_modScheme[currentSector] = modulation_scheme_highest
+        self.NLoS_SNR[currentSector] = SNR_Highest
+
     def setupNLoSLinks(self,AP,simRoom):
             for i in range(0, AP.number_of_sectors):
                 if(self.NLoS_Setup[i] == False):
@@ -274,18 +271,13 @@ class macUE:
                                                                               self.ue_device.AP.RFBox.frequency, 
                                                                                       0)
         grant_approved = UL_GRANT(timeSlots[randomTimeSlot_pick],max_data_rate)
-        self.lastULGrant = grant_approved
-
+        self.lastULGrant = grant_approved 
         
-
     def process_CTA_packet(self,CTA:CTA):
         arrival_time = CTA.timeStampTransmission + channel.compute_propagationDelay(self.distanceToAP) + CTA.transmissionDelay
-        CTA.setupPropagationDelay(self.distanceToAP, self.ue_device.id)
-        CTA.settimeStampArrival(arrival_time)
         self.lastCTA_ArrivalTime = arrival_time
-
     
-    def process_CTS_packet(self, CTS:CTS,sectorStartTime, currentSector, sectorTime):
+    def process_CTS_packet(self, CTS:CTS,sectorStartTime, currentSector, sectorTime): #verified - Hussam
         UL_PACKETS  = []
         NLoS_Signals = []
         if(self.retransmissions > 0):

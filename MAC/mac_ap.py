@@ -27,7 +27,7 @@ class macAP:
     def maxControlDelay(self,packet_length, distance, bit_rate, processing_time):
         return channel.compute_propagationDelay(distance)  + channel.compute_transmissionTime(packet_length, bit_rate) + processing_time
 
-    def create_CTA_Packet(self,timeStamp,sector):
+    def create_CTA_Packet(self,timeStamp,sector): # Verified 4/28/2025
         CTA_packet = CTA(self.AP.id, sector)
         CTA_packet.setupTransmissionDelay()
         CTA_packet.settimeStampTransmission(timeStamp)
@@ -135,12 +135,11 @@ class macAP:
         return ACK_Packet
 
 
-
-    def create_CTS_Packet_OMNI(self, packets:RTS): ## the endtime needs to account for the ACK...
+    def create_CTS_Packet_OMNI(self, packets:RTS): # Verified - Hussam {Need to generalize this to work with all protocols.}
         CTS_Packet = CTS(self.AP.id,self.currentSector)
         packets_sorted = sorted(packets, key=lambda packet:packet.timeStampArrival)
         CTS_Packet.setupTransmissionDelay()
-        CTS_Packet.settimeStampTransmission(packets_sorted[0].timeStampArrival) #RTS cutoff time. does not accound for the prop delay of the last rTS but its insignificant (ignore lvl high)
+        CTS_Packet.settimeStampTransmission(packets_sorted[-1].timeStampArrival) # Send CTS Packet after recieving all RTS packets for current sector. It is better to use the Sector End time insteat {insignificant impact on results.}
         packet_transmission_time = 0
         
         for indexer,packet in enumerate(packets_sorted):
@@ -207,22 +206,21 @@ class macAP:
 
     
     
-    def find_earliest_available_slot(self, packet_transmission_time, RTS_arrivalTime):
-        # Check for gaps between consecutive allocations
+    def find_earliest_available_slot(self, packet_transmission_time, earliest_grant_Time): # Verified - Hussam
         for i in range(len(self.ULGrantsAllocationTable_OMNI_end)-1):
             current_end  = self.ULGrantsAllocationTable_OMNI_end[i]
             next_start   = self.ULGrantsAllocationTable_OMNI_start[i+1]
             time_inBetween = next_start - current_end
             timeSlot_match = None
             if(time_inBetween >= packet_transmission_time): #found potential match
-                if(current_end >= RTS_arrivalTime): # second condition is met
+                if(current_end >= earliest_grant_Time): # second condition is met
                     self.ULGrantsAllocationTable_OMNI_start.insert(i+1,current_end)
                     self.ULGrantsAllocationTable_OMNI_end.insert(i+1, current_end + packet_transmission_time)
                     timeSlot_match = current_end
                     return timeSlot_match
                 else:
                     time_rewind = next_start - packet_transmission_time
-                    if(time_rewind > current_end and time_rewind >= RTS_arrivalTime): 
+                    if(time_rewind > current_end and time_rewind >= earliest_grant_Time): 
                         timeSlot_match = time_rewind
                         self.ULGrantsAllocationTable_OMNI_start.insert(i+1,time_rewind)
                         self.ULGrantsAllocationTable_OMNI_end.insert(i+1, time_rewind + packet_transmission_time)

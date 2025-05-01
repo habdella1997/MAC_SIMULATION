@@ -31,7 +31,7 @@ class AP:
         #TOP LeveL To setup AP Object and all its dependencies ...
         self.setup_sector_boundaries()
     
-    def find_current_sector(self,sectorStartTime, currentSector, sectorTime, timeAdvance):
+    def find_current_sector(self,sectorStartTime, currentSector, sectorTime, timeAdvance): #Verified - Hussam
         totalSectors = self.number_of_sectors
         elapsedTime = timeAdvance - sectorStartTime
 
