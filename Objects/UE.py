@@ -102,7 +102,7 @@ class UETransmission:
 
 
 
-    def transmit_success(self, ulPacketSequencID,APSector):
+    def transmit_success(self, ulPacketSequencID,APSector): # Verified - Hussam
         match = -1
         ul_packet = None
         for index,ul_packet in enumerate(self.pending_transmission_ULPacket):
@@ -193,7 +193,7 @@ class UE:
             return True #There is a packet to transmit
         return False
     
-    def transmission_succesful(self,ulPacketSequencID,APSector):
+    def transmission_succesful(self,ulPacketSequencID,APSector): # Verified
         transmission_time_intiated, UL_packet = self.UE_TRANSMISSIONS.transmit_success(ulPacketSequencID,APSector)
         return transmission_time_intiated,UL_packet
 

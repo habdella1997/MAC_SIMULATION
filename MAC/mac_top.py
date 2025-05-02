@@ -491,15 +491,17 @@ class MAC_Controller:
                     MESSAGES_Logging.append("UE : " + str(ueID) + ", has been alloacted the following time slot: " + str(timeSlot))
         return CTS_PACKET
 
-    def setup_UL_packets(self,currentSector, CTS_PACKET,MACUE_devices_withTransmission_Request,MESSAGES_Logging,NLoS_Path_Mapping,sector_start_time,Sector_Time):
+    def setup_UL_packets(self,currentSector, CTS_PACKET,MACUE_devices_withTransmission_Request,MESSAGES_Logging,NLoS_Path_Mapping,sector_start_time,Sector_Time): # Verified - Hussam
         UL_PACKETS   = []
         NLoS_Signals = []
+        AP_Sectors   = []
         if(CTS_PACKET != None):
             for device in MACUE_devices_withTransmission_Request:
                 for indexer,ue_ID in enumerate(CTS_PACKET.allocatedUEID):
                     if device.ue_device.id == ue_ID:
-                        UL_PACKET, NLoS_Signal = device.process_CTS_packet(CTS_PACKET,sector_start_time,currentSector,Sector_Time)
+                        UL_PACKET, NLoS_Signal,AP_Sector = device.process_CTS_packet(CTS_PACKET,sector_start_time,currentSector,Sector_Time)
                         UL_PACKETS = UL_PACKETS + UL_PACKET
+                        AP_Sectors = AP_Sectors + AP_Sector
                         for index,pck in enumerate(UL_PACKET):
                             if(pck.linkType == constants.NLoS and NLoS_Signal[index] != None): 
                                 NLoS_Path_Mapping[device.ue_device.id][0].append(pck.timeStampTransmission)
@@ -507,12 +509,12 @@ class MAC_Controller:
                             MESSAGES_Logging.append("UEID: " + str(ue_ID) + "generated the following ul packet: " + str(pck.sequence_id))
                         break
             
-        return UL_PACKETS, NLoS_Signals
+        return UL_PACKETS, NLoS_Signals, AP_Sectors
 
-    def setup_ACK_packets(self,UL_PACKETS,MACAP):
+    def setup_ACK_packets(self,UL_PACKETS,MACAP, APSectors): # Verified - Hussam
         ACK_Packets = []     
-        for UL_Packet in UL_PACKETS:
-            ACK_Packet = MACAP.create_ACK_PacketNLoS(UL_Packet)
+        for index,UL_Packet in enumerate(UL_PACKETS):
+            ACK_Packet = MACAP.create_ACK_PacketNLoS(UL_Packet,APSectors[index])
             ACK_Packets.append(ACK_Packet)
         return ACK_Packets 
     
@@ -637,7 +639,7 @@ class MAC_Controller:
                                                 MACAP)
             
             
-            UL_PACKETS,dontcare = self.setup_UL_packets(
+            UL_PACKETS,dontcare,APSectors = self.setup_UL_packets(
                                                         MACAP.currentSector,
                                                         CTS_PACKET,
                                                         MACUE_devices_withTransmission_Request,
@@ -647,14 +649,16 @@ class MAC_Controller:
                                                         Sector_Time
                                                         )
 
-            MAC_Results.add_sector_activity_UL(MACAP.currentSector,len(UL_PACKETS))
-            ACK_Packets = self.setup_ACK_packets(UL_PACKETS,MACAP)
+            for apSector in APSectors:
+                MAC_Results.add_sector_activity_UL(apSector,1)
+            
+            ACK_Packets = self.setup_ACK_packets(UL_PACKETS,MACAP, APSectors)
 
             for MACUE_device in MACUE_devices_withTransmission_Request:
                 for ACK_Packet in ACK_Packets:
                     if(MACUE_device.ue_device.id == ACK_Packet.ueIDlist[0]):
                         MESSAGES_Logging.append("UEID : "+str(MACUE_device.ue_device.id) + "has receieved an ACK")
-                        latency, data_rate = MACUE_device.process_ACK_packet_NLoS(ACK_Packet,MACAP.currentSector)
+                        latency, data_rate = MACUE_device.process_ACK_packet_NLoS(ACK_Packet,sector_start_time,MACAP.currentSector,Sector_Time)
                         MESSAGES_Logging.append("Latency For Transaction: " + str(latency))
                         MESSAGES_Logging.append("Tput for transaction: " + str((self.dataPacketLength_Encoded / latency)/1e9))
                         if(latency < 0 ):

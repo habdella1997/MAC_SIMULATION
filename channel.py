@@ -3,12 +3,12 @@ import constants as C
 import numpy as np
 import math_toolkit
 
-NF_mixer = 6
+NF_mixer = 5
 NF_LNA = 1
-G_LNA = 13
-L_mixer = 5
-L_misc = 1
-NF = 7
+G_LNA = 15
+L_mixer = 4
+L_misc = 0
+NF = 6
 
 
 def freq_2_lambda(f):
@@ -35,12 +35,15 @@ def link_budget(p_tx, distance, max_bandwidth, antenna_gain, f_c, abs_loss): #ve
     p_tx = 10 * math.log10(p_tx)
     lambda_fc = C.SPEED_OF_LIGHT / f_c
 
-    spreading_loss = 20 * math.log10((4 * math.pi) / lambda_fc * distance)
+    spreading_loss = 20 * math.log10((4 * math.pi * distance) / lambda_fc)
     L_total = 2*L_mixer + L_misc + abs_loss + spreading_loss
 
 
-    NF = 10 * math.log10(10 ** (NF_mixer / 10) + (10 ** (NF_LNA / 10) - 1) / 10 ** (G_LNA / 10))
-  
+    #NF = 10 * math.log10(10 ** (NF_mixer / 10) + (10 ** (NF_LNA / 10) - 1) / 10 ** (G_LNA / 10))
+    
+    NF = 10 * math.log10(10 ** (NF_LNA / 10) + (10 ** (NF_mixer / 10) - 1) / 10 ** (G_LNA / 10))
+
+
     modulation_table =     [ "QPSK"   , "8-PSK"  , "16-QAM" , "64-QAM" ]
     B_efficiencies = [ 2   , 3  , 4    , 6   ]
     Eb_N0_min      = [ 10.6, 14 , 14.5 , 18.8]

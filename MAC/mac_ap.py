@@ -121,9 +121,9 @@ class macAP:
             return ACK_Packet
         return None
     
-    def create_ACK_PacketNLoS(self, packet:UL_DATA):
+    def create_ACK_PacketNLoS(self, packet:UL_DATA, AP_Sector): # Verified - Hussam
         timeofTransmission = packet.timeStampArrival  #channel.compute_propagationDelay(maxDistance)
-        ACK_Packet = ACK(self.AP.id, self.currentSector)
+        ACK_Packet = ACK(self.AP.id, AP_Sector)
         ACK_Packet.setupTransmissionDelay()
         ACK_Packet.settimeStampTransmission(timeofTransmission)
         UL_seqID  = packet.sequence_id 

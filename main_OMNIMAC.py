@@ -20,8 +20,8 @@ room_l,room_w,room_h = 26.6,26.6,0
 
 
 # Setup UE Parameters
-UE_TX_Power             = 0.1 #Watts
-maxNumUEDevices         = 5
+UE_TX_Power             = 0.2 #Watts
+maxNumUEDevices         = 1
 UE_Device_Density       = 0.1
 UE_UL_interarrival_time = 800e-6
 UE_BeamWidth = 1
@@ -75,45 +75,6 @@ MACSIMULATION.maxUEYcord = 15
 
 MACSIMULATION.blockage = False
 
-
-
-# import os
-# import RF
-# gain = RF.define_gain(AP_BeamWidth)
-# gainUE = RF.define_gain(3)
-# AP_RFBox = RF.RFBox(gain,AP_TX_Power,txFrequency,AP_BeamWidth,69.12e9)
-# UE_RFBox = RF.RFBox(gainUE,AP_TX_Power,txFrequency,3,69.12e9) 
-# APDevice = AP.AP(AP_RFBox, 0)
-# APDevice.setupAP()
-# simulation_room.setup_mirrors_in_room(mirrors)
-# simulation_room.setup_fov_generic(APDevice)
-# import sys
-# plt = plotter.results_plotSimulaitonRoom(simulation_room, APDevice, [])
-# plt.show()
-# sys.exit(1)
-
-
-# for mirror_line in mirrors.keys():
-#     sub_sub_folder = os.path.join("C:\\Users\\Hussam\\Desktop\\MAC_Simulaotr\\MirrorConfigs\\Multi_Layer_Mirror_Setup\\MirrorPlots2", str(mirror_line))
-#     os.makedirs(sub_sub_folder, exist_ok=True)
-#     for mirror in mirrors[mirror_line]:
-#         print("Sector: " + str(mirror_line))
-#         print("Tilt Angle: " + str(mirror.angleTilt))
-#         # plt.figure()
-#         # ax = plt.gca()
-#         # ax.set_xlim([simulation_room.width*-1 , simulation_room.width*1 ])
-#         # ax.set_ylim([simulation_room.length*-1 , simulation_room.length*1])
-#         plt = plotter.results_plotUEFoV(simulation_room, APDevice, [],mirror)
-#         fig_path = os.path.join(sub_sub_folder,"TiltAngle_"+str(mirror.angleTilt)+".png")
-#         plt.savefig(fig_path)
-#         # plt.show()
-#         plt.close()
-
-
-# sys.exit()
-
-
-
 plot_avg_tput = 0
 RESULTS = results.Results()
 
@@ -140,13 +101,12 @@ if (plot_avg_tput):
                                                             system_time[-1], # System End Time
                                                             Logging,
                                                             mirrors)
-                                                            
-        avg_tput = RESULTS.process_results_generic(MAC_Results,64000*8,False,False)
+        avg_tput = RESULTS.process_results_generic(MAC_Results,MACSIMULATION.dataPacketLength_Encoded,False,False)
         print("Tput: " + str(avg_tput))
         avg_tput_data.append(avg_tput)
     plotter.results_create_line_plot( inter_arrival_time,avg_tput_data, "Inter-Arrival Time [us]", "Avg. Tput [Gbps]", "Tput Fixed Node Density 0.05 nodes/m^2", None,"OMNIResults")
 else:
-    system_time   = [x*time_scale  for x in range(0,100)]#200 + int(UE_UL_interarrival_time*0.4))]
+    system_time   = [x*time_scale  for x in range(0,500)]#200 + int(UE_UL_interarrival_time*0.4))]
     startTime = int(len(system_time) * 0.2)
     MAC_Results,NLoSReflections = MACSIMULATION.setupMAC(number_AP, 
                                                          UE_Device_Density, 
@@ -163,8 +123,7 @@ else:
     AP,UE_list,MACUE_devices = MACSIMULATION.return_devices()
     avg_tput = RESULTS.process_results_generic(MAC_Results,MACSIMULATION.dataPacketLength_Encoded,False,True)
     print(avg_tput)
-    RESULTS.setup_NLoSReflectionLog( NLoSReflections)
-    
+    RESULTS.setup_NLoSReflectionLog(NLoSReflections)
     plt = plotter.results_plotSimulaitonRoom(simulation_room, AP, UE_list)
     RESULTS.save_room(plt)
     plt = plotter.statistics_plot_sectorUsage(MAC_Results.sector_activity_RTS)

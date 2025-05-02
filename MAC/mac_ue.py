@@ -78,14 +78,6 @@ class macUE:
                     return False
             elif(linkType == constants.NLoS):
                 if(self.mySector != apSector):
-                    if(self.NLoS_Signal[MACAP.currentSector] == None or self.NLoS_Signal[MACAP.currentSector].NLoS ==0):
-                        print("Sector: " + str(MACAP.currentSector))
-                        print("UE cords: ")
-                        print([self.ue_device.xCor,self.ue_device.yCor])
-                        print("No NLoS Available - should not happen")
-                        sys.exit(1)
-                        MESSAGES_Logging.append("UE Node Has something to transmit, but nLoS Aint available")
-                        return False
                     if(self.NLoS_max_data_rate[MACAP.currentSector] == 0): #weak NLoS Link Non-existant
                         return False
                     return True 
@@ -114,9 +106,10 @@ class macUE:
         randomBackoffTime = self.compute_RANDOMBACKOFF_time()
         if(prevRTSPacket != None):
             if(transmissionInstance + randomBackoffTime <= (prevRTSPacket.timeStampTransmission + prevRTSPacket.transmissionDelay)):
-                timeAdvance = prevRTSPacket.timeStampTransmission + prevRTSPacket.transmissionDelay + small_time_delta 
+                timeAdvance = (prevRTSPacket.timeStampTransmission + prevRTSPacket.transmissionDelay + small_time_delta) - transmissionInstance
+
         RTS_packet = None
-        actual_transmissionTime = timeAdvance + randomBackoffTime
+        actual_transmissionTime = timeAdvance + randomBackoffTime + transmissionInstance
 
         if linkType == constants.LoS:
             RTS_packet = RTS(self.ue_device.id, self.ue_device.AP.id,linkType)
@@ -182,9 +175,9 @@ class macUE:
     def setupNLoSLinks_helper(self,AP,currentSector,simRoom):
         # Step 1: Get Mirrors in my FoV
         my_mirrors = simRoom.mirrors_with_coverage(self.ue_device,currentSector)
-        p_rx_highest, max_data_rate_highest, SNR_Highest,total_distance_highest= -1,-1,-1,-1
+        p_rx_highest, max_data_rate_highest, SNR_Highest,total_distance_highest=  0, 0, 0,0
         NLoS_Signal_highest = None
-        
+        modulation_scheme_highest = None
         if(my_mirrors):
             for mirror in my_mirrors:
                 NLoS_Signal = simRoom.setup_valid_reflection_vectors(self.ue_device,AP,currentSector, mirror)
@@ -217,6 +210,8 @@ class macUE:
                                                                                         self.ue_device.RFBox.gain +self.ue_device.AP.RFBox.gain , 
                                                                                         self.ue_device.AP.RFBox.frequency, 
                                                                                         0)
+                if(SNR>SNR_Highest):
+                    SNR_Highest = SNR
                 if(max_data_rate>max_data_rate_highest):
                     p_rx_highest = p_rx
                     max_data_rate_highest = max_data_rate
@@ -225,7 +220,9 @@ class macUE:
                     NLoS_Signal_highest = NLoS_Signal
                     total_distance_highest = total_distance
                     break
-
+        if(max_data_rate_highest==0):
+            print(currentSector)
+            print("SNR: " + str(SNR_Highest))
         self.NLoS_max_data_rate[currentSector] = max_data_rate_highest
         self.NLoS_p_rx[currentSector] = p_rx_highest
         self.NLoS_Setup[currentSector] = True
@@ -278,8 +275,9 @@ class macUE:
         self.lastCTA_ArrivalTime = arrival_time
     
     def process_CTS_packet(self, CTS:CTS,sectorStartTime, currentSector, sectorTime): #verified - Hussam
-        UL_PACKETS  = []
+        UL_PACKETS   = []
         NLoS_Signals = []
+        AP_Sectors   = [] #used to track sector activity. 
         if(self.retransmissions > 0):
             self.retransmissions -= 1
         
@@ -300,7 +298,7 @@ class macUE:
                 data_rate_approved = CTS.allocateddataRate[i]
                 if(find_time_slot < self.ue_device.UE_TRANSMISSIONS.check_earliest_transmission()):
                     print("Error MAC UE CTS Packet Processing -> Grant Received Prior To UE need for transmission\n")
-                    sys.exit(1)
+                    sys.exit(-1)
                 sector_forTransmission = self.ue_device.AP.find_current_sector(sectorStartTime, currentSector, sectorTime, find_time_slot)
                 linkType = None
                 if(sector_forTransmission == self.mySector):
@@ -311,11 +309,12 @@ class macUE:
                 if(UL_PACKET == None):
                     continue
                 UL_PACKETS.append(UL_PACKET)
+                AP_Sectors.append(sector_forTransmission)
                 if(linkType == constants.NLoS):
                     NLoS_Signals.append(NLoS_Signal)
                 else:
                     NLoS_Signals.append(None)
-        return UL_PACKETS, NLoS_Signals
+        return UL_PACKETS, NLoS_Signals, AP_Sectors
 
     
     def process_ACK_packet(self, ACKs:ACK,currentSector):
@@ -336,16 +335,12 @@ class macUE:
                     return latency,data_rate
         return None,None
 
-    def process_ACK_packet_NLoS(self, ACKs:ACK,APSector ):
-        #BUG_REPORT:
-        #URGENT_Level_FUCKFUCKFUCK:(MEANING FIX ASAP)
-        #IF UL Packet is dropped, you need to find related UL packet here and not remove it from the tranmission queue
-        # The way this goes, I drop the latest of the qeue for every ack (THIS is fine LoS since there is no drops given the time slot approach)
+    def process_ACK_packet_NLoS(self, ACKs:ACK,sectorStartTime,currentSector,sectorTime ): # Verified - Hussam
         latency   = 0
         data_rate = 0
         arrival_time = 0
-        
-        timeOfPacketCreation, UL_packet = self.ue_device.transmission_succesful(ACKs.packetsACKED_UELIST[0],APSector)
+        AP_Sector_duringUL = self.ue_device.AP.find_current_sector(sectorStartTime, currentSector, sectorTime, ACKs.timeStampTransmission)
+        timeOfPacketCreation, UL_packet = self.ue_device.transmission_succesful(ACKs.packetsACKED_UELIST[0],AP_Sector_duringUL)
         ack_distance = UL_packet.distance
         arrival_time = ACKs.timeStampTransmission + channel.compute_propagationDelay(ack_distance) + ACKs.transmissionDelay
         latency = arrival_time - timeOfPacketCreation
