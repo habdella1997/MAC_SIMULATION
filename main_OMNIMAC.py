@@ -13,14 +13,14 @@ import MirrorConfigs.Multi_Layer_Mirror_Setup.upperhorizontal as upperhorizontal
 import MirrorConfigs.Multi_Layer_Mirror_Setup.lowerhorizontal as lowerhorizontal 
 
 
-# Clean_up.cleanup.delete_old_folders()
+Clean_up.cleanup.delete_old_folders()
 
 # Setup Room Parameters
 room_l,room_w,room_h = 26.6,26.6,0
 
 
 # Setup UE Parameters
-UE_TX_Power             = 0.2 #Watts
+UE_TX_Power             = 0.15 #Watts
 maxNumUEDevices         = 1
 UE_Device_Density       = 0.1
 UE_UL_interarrival_time = 800e-6
@@ -65,7 +65,7 @@ MACSIMULATION.control_BW = system_bandwidth * (control_BW_Allocation_Percentage/
 MACSIMULATION.data_BW    = system_bandwidth * ((100 - control_BW_Allocation_Percentage)/100)
 
 # Setup MAC Simulation Parameters 
-MACSIMULATION.sectorTime = 3e-6
+MACSIMULATION.sectorTime = 6e-6
 MACSIMULATION.UERandomBackOffTime = 20e-9
 
 # Setup the max UE coordinates in the room
@@ -107,7 +107,7 @@ if (plot_avg_tput):
     plotter.results_create_line_plot( inter_arrival_time,avg_tput_data, "Inter-Arrival Time [us]", "Avg. Tput [Gbps]", "Tput Fixed Node Density 0.05 nodes/m^2", None,"OMNIResults")
 else:
     system_time   = [x*time_scale  for x in range(0,500)]#200 + int(UE_UL_interarrival_time*0.4))]
-    startTime = int(len(system_time) * 0.2)
+    startTime = int(len(system_time) * 0.02)
     MAC_Results,NLoSReflections = MACSIMULATION.setupMAC(number_AP, 
                                                          UE_Device_Density, 
                                                          AP_BeamWidth,
@@ -116,7 +116,7 @@ else:
                                                          AP_TX_Power,
                                                          txFrequency, 
                                                          UE_UL_interarrival_time,
-                                                         system_time[startTime-1], # System Start Time
+                                                         system_time[1], # System Start Time
                                                          system_time[-1], # System End Time
                                                          Logging,
                                                          mirrors) 
@@ -126,25 +126,38 @@ else:
     RESULTS.setup_NLoSReflectionLog(NLoSReflections)
     plt = plotter.results_plotSimulaitonRoom(simulation_room, AP, UE_list)
     RESULTS.save_room(plt)
-    plt = plotter.statistics_plot_sectorUsage(MAC_Results.sector_activity_RTS)
-    plt = plotter.statistics_plot_sectorUsage(MAC_Results.sector_activity_UL)
+    # plt = plotter.statistics_plot_sectorUsage(MAC_Results.sector_activity_RTS, "RTS Activity")
+    # plt = plotter.statistics_plot_sectorUsage(MAC_Results.sector_activity_UL,  "UL Activity")
     for mac_ue_device in MACUE_devices:
         ue_device = mac_ue_device.ue_device
         print("ue device: " +str(ue_device.id))
         plt = plotter.results_plotUESetup(simulation_room, AP, ue_device)
         RESULTS.save_mirrorRoom(plt,ue_device.id)
         plt.close()
-        NLos_Signals = []
+        NLos_Signals      = []
+        SNR_forNLoS       = []
+        distance_forNLoS  = []
+        data_rate_forNLos = []
         for sector in range(0,AP.number_of_sectors):
             mirrrors = simulation_room.mirrors_with_coverage(ue_device,sector)
             plt = plotter.results_plotUEFoV(simulation_room, AP, ue_device,mirrrors[0])
             mirror_indicator = str(sector)
             RESULTS.save_mirrorFoV(plt,ue_device.id,mirror_indicator)
             plt.close()
-            NLos_Signals.append(mac_ue_device.NLoS_Signal[sector])
-        plt = plotter.results_plotAllSignals(simulation_room,AP, ue_device, NLos_Signals)
+            if(sector == mac_ue_device.mySector):
+                NLos_Signals.append(None)
+                SNR_forNLoS.append(mac_ue_device.LoSSNR)
+                distance_forNLoS.append(mac_ue_device.LoSDistance)
+                data_rate_forNLos.append(mac_ue_device.LoSDataRate)
+            else:
+                NLos_Signals.append(mac_ue_device.NLoS_Signal[sector])
+                data_rate_forNLos.append(mac_ue_device.NLoS_max_data_rate[sector])
+                distance_forNLoS.append(mac_ue_device.NLoS_total_distance[sector])
+                SNR_forNLoS.append(mac_ue_device.NLoS_SNR[sector])
+        plt = plotter.results_plotAllSignals(simulation_room,AP, ue_device, NLos_Signals,SNR_forNLoS,distance_forNLoS,data_rate_forNLos)
         RESULTS.save_AllNLoSSingals(plt,ue_device.id,sector)
         plt.close()
     from Logging import ue_logging
     UE_LOGGER = ue_logging.Logger()
     UE_LOGGER.write_UE_attr(MACUE_devices)
+

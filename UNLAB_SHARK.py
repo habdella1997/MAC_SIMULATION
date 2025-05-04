@@ -13,19 +13,34 @@ import pickle
 import matplotlib.image as mpimg
 import plotter
 import io
+import sys
+import time
+import platform
 
+def fix_path(path):
+    if platform.system() == "Windows":
+        return path.replace("/", "\\")
+    else:
+        return path.replace("\\", "/")
+    
 def get_lastFolder(base_dir):
-    base_dir = os.path.abspath(base_dir)
+    # base_dir = os.path.abspath(base_dir)
+    base_path = os.path.abspath(os.path.join(os.path.dirname(base_dir), ".."))  
+    base_path = fix_path(os.path.join(base_path,base_dir))     
+    base_dir = base_path
     folders = [folder for folder in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, folder))]
     sorted_folders = sorted(folders, reverse=True)
     if not sorted_folders:
         raise FileNotFoundError("No folders found in the specified base directory.")
     latest_folder = sorted_folders[0]
-    return latest_folder
+    return os.path.join(base_dir,latest_folder)
 
 
 def load_latest_transmission_logs(base_dir,file_name):
-    base_dir = os.path.abspath(base_dir)
+    #base_dir = os.path.abspath(base_dir)
+    base_path = os.path.abspath(os.path.join(os.path.dirname(base_dir), ".."))  
+    base_path = fix_path(os.path.join(base_path,base_dir))     
+    base_dir = base_path
     folders = [folder for folder in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, folder))]
     sorted_folders = sorted(folders, reverse=True)
     if not sorted_folders:
@@ -41,7 +56,9 @@ def load_latest_transmission_logs(base_dir,file_name):
 def get_ue_plot_paths(base_dir):
     plot_paths = []
     plot_labels = []
-    
+    base_path = os.path.abspath(os.path.join(os.path.dirname(base_dir), ".."))  
+    base_path = fix_path(os.path.join(base_path,base_dir))     
+    base_dir = base_path
     # Traverse through all the folders in 'Individual_UE_RESULTS'
     for folder_name in os.listdir(base_dir):
         folder_path = os.path.join(base_dir, folder_name)
@@ -98,26 +115,46 @@ class LogViewerApp:
         self.selected_timestamps = []
         self.ctrl_pressed = False  # Track if Ctrl key is pressed
         
+        # EDIT to fix graphics.
+        style = ttk.Style()
+        style.theme_use("clam")  # Or "alt", "default", "vista"
+
+        # Custom Treeview background and row color
+        style.configure("Treeview",
+                        background="#1e1e1e",     # background of table
+                        foreground="white",       # text color
+                        fieldbackground="#1e1e1e",# background of cell field
+                        rowheight=24,             # height of each row
+                        font=("Arial", 10))
+
+        style.map('Treeview', background=[('selected', '#007acc')])  # selected row color
+        
         # Filter Frame
         filter_frame = tk.Frame(root)
         filter_frame.pack(pady=10)
         filter_frame.configure()
         # Dropdown for Direction
-        tk.Label(filter_frame, text="Direction:", bg="CadetBlue1").pack(side=tk.LEFT)
+
+        label_style = {"font": ("Arial", 10, "bold"), "fg": "white", "bg": "#2e2e2e"}
+
+        #tk.Label(filter_frame, text="Direction:", bg="CadetBlue1").pack(side=tk.LEFT)
+        tk.Label(filter_frame, text="Direction:", **label_style).pack(side=tk.LEFT, padx=5)
         self.direction_var = tk.StringVar()
         self.direction_menu = ttk.Combobox(filter_frame, textvariable=self.direction_var, values=directions)
         self.direction_menu.pack(side=tk.LEFT)
         self.direction_menu.bind("<<ComboboxSelected>>", self.update_table)
 
         # Dropdown for Sender
-        tk.Label(filter_frame, text="Sender:", bg="CadetBlue1").pack(side=tk.LEFT)
+        #tk.Label(filter_frame, text="Sender:", bg="CadetBlue1").pack(side=tk.LEFT)
+        tk.Label(filter_frame, text="Sender:", **label_style).pack(side=tk.LEFT, padx=5)
         self.sender_var = tk.StringVar()
         self.sender_menu = ttk.Combobox(filter_frame, textvariable=self.sender_var, values=senders)
         self.sender_menu.pack(side=tk.LEFT)
         self.sender_menu.bind("<<ComboboxSelected>>", self.update_table)
 
         # Dropdown for Recipient
-        tk.Label(filter_frame, text="Recipient:", bg="CadetBlue1").pack(side=tk.LEFT)
+        #tk.Label(filter_frame, text="Recipient:", bg="CadetBlue1").pack(side=tk.LEFT)
+        tk.Label(filter_frame, text="Recipient:", **label_style).pack(side=tk.LEFT, padx=5)
         self.recipient_var = tk.StringVar()
         self.recipient_menu = ttk.Combobox(filter_frame, textvariable=self.recipient_var, values=recipients)
         self.recipient_menu.pack(side=tk.LEFT)
@@ -205,7 +242,7 @@ class LogViewerApp:
         self.rightFrame.pack(side="right", fill="both", expand=True)
 
         result_plotPaths = "Results\\"
-        result_plotPaths += get_lastFolder(result_plotPaths) + "\\Individual_UE_RESULTS"
+        result_plotPaths = os.path.join(get_lastFolder(result_plotPaths),"\\Individual_UE_RESULTS")
         plot_paths, plot_labels = get_ue_plot_paths(result_plotPaths)
         plot_options = plot_labels
         dropdown = ttk.Combobox(self.centerFrame, values=plot_options, state="readonly",width=20, height=5)
@@ -251,7 +288,8 @@ class LogViewerApp:
         self.transmission_table_data.heading("Num ReTx",     text="Num ReTx")
         self.transmission_table_data.heading("Status",     text="Status")
         self.transmission_table_data.heading("AP Sector",     text="AP Sector")
-        self.transmission_table_data.bind("<Double-1>", self.on_transmission_row_double_click)
+        #self.transmission_table_data.bind("<Double-1>", self.on_transmission_row_double_click)
+        self.transmission_table_data.bind("<Return>", self.on_transmission_row_double_click)
 
         
         # Sample UE IDs (replace with actual UE data from your DataFrame)
@@ -269,7 +307,9 @@ class LogViewerApp:
             sector_path_ueid = load_latest_transmission_logs("Logs\\UE_LOG","UE_"+str(ue_id)+".txt")
             sector_num,dist,prop = self.extract_sector_from_file(sector_path_ueid, ue_id)
             self.ue_id_table.insert("", "end", values=(ue_id,sector_num,dist,prop))
-        self.ue_id_table.bind("<Double-1>", self.on_ue_id_click)
+        #self.ue_id_table.bind("<Double-1>", self.on_ue_id_click)
+        self.ue_id_table.bind("<Return>", self.on_ue_id_click)
+
         self.ue_id_table.pack(fill='both', expand=True)
         self.transmission_table_data.pack(fill='both',expand=True)
         
@@ -280,7 +320,7 @@ class LogViewerApp:
     
     def load_plot_image(self):
         # Load the PNG image file and add it to the plot frame
-        path = load_latest_transmission_logs("Results","Room\\Room_Setup.png")
+        path = load_latest_transmission_logs("Results",fix_path("Room\Room_Setup.png"))
         print("Image Path: " + path)
         img = Image.open(path)  # Path to your saved image file
         img_resized = img.resize((400, 400), PIL.Image.LANCZOS)  # Resize if needed
@@ -340,7 +380,7 @@ class LogViewerApp:
 
         for idx, row in filtered_data.iterrows():
             row_values = row.tolist()
-            background_color = "CadetBlue2" if row_values[1] == "DOWNLINK" else "CadetBlue3"
+            background_color = "#1e1e1e" if row_values[1] == "DOWNLINK" else "#2a2a2a"
             self.table.insert("", "end", values=row_values, tags=(idx,))
             self.table.tag_configure(idx, background=background_color)
         
@@ -445,6 +485,10 @@ class LogViewerApp:
     #     canvas = FigureCanvasTkAgg(fig, master=self.resultplot_frame)
     #     canvas.draw()
     #     canvas.get_tk_widget().pack()
+
+
+
+
     def on_transmission_row_double_click(self, event):
         # Identify the clicked row
         selected_item = self.transmission_table_data.selection()
@@ -460,9 +504,13 @@ class LogViewerApp:
         plot_window.title(f"Plot for (APP) TX Time: {app_tx_time}")
         plot_window.geometry("600x400")
 
-        pickleFilePath = "Results\\"
-        pickleFilePath += get_lastFolder(pickleFilePath) + "\\NLoSData\\NLoSReflection.pkl"
-
+        pickleFilePath = "Results"
+        pickleFilePath = get_lastFolder(pickleFilePath) #+ "\\NLoSData\\NLoSReflection.pkl"
+        print(pickleFilePath)
+        pickleFilePath = os.path.join(pickleFilePath,"\\NLoSData\\NLoSReflection.pkl")
+        print(pickleFilePath)
+        pickleFilePath = fix_path(pickleFilePath)
+        print(pickleFilePath)
         NLoSDATA = []
         with open(pickleFilePath, 'rb') as file:  # Open the file in binary read mode
             NLoSDATA = pickle.load(file)
@@ -477,24 +525,33 @@ class LogViewerApp:
         print("reflect slope: " + str(RFLoS_Signal.reflect_slope))
         print("reflect x : " + str(RFLoS_Signal.reflect_x))
         print("reflect y : " + str(RFLoS_Signal.reflect_y))
-        fig, axes = plt.subplots(1, 3, figsize=(16, 3))  # 4 plots side by side
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6))  # 4 plots side by side
         titles = [
             "Image 1",
             "Image 2",
             "Image 3"
                             ]
         imageFilePath = "Results\\"
-        pickleFilePath_1 = imageFilePath+get_lastFolder(imageFilePath) + "\\Room\\mirrorFoV\\" + str(self.lastUESelected) 
-        pickleFilePath_2 = imageFilePath+get_lastFolder(imageFilePath) + "\\Room\\mirrorRoom\\" + str(self.lastUESelected) +"\\mirrorRoom.pkl"
-        pickleFilePath_3 = imageFilePath+get_lastFolder(imageFilePath) + "\\Room\\NLoSAllSignals\\" + str(self.lastUESelected) + "\\NLoSSignals.png"
-        image_paths = [pickleFilePath_1,pickleFilePath_2,pickleFilePath_3]
+        base_result_folder =  get_lastFolder("Results")
+
+        mirror_fov_path   = fix_path(f"Room/mirrorFoV/{self.lastUESelected}")
+        mirror_room_path  = fix_path(f"Room/mirrorRoom/{self.lastUESelected}/mirrorRoom.pkl")
+        nlos_signals_path = fix_path(f"Room/NLoSAllSignals/{self.lastUESelected}/NLoSSignals.png")
+
+        # Final absolute paths
+        pickleFilePath_1 = os.path.join(base_result_folder, mirror_fov_path)
+        pickleFilePath_2 = os.path.join(base_result_folder, mirror_room_path)
+        pickleFilePath_3 = os.path.join(base_result_folder, nlos_signals_path)
+
+        image_paths = [pickleFilePath_1, pickleFilePath_2, pickleFilePath_3]
 
         mirror_subfolders = [f for f in os.listdir(pickleFilePath_1) if os.path.isdir(os.path.join(pickleFilePath_1, f))]
         
         # Helper function to update the leftmost figure when dropdown changes
         def update_leftmost_image(selected_folder):
-            pickleFilePath_1_new = imageFilePath+get_lastFolder(imageFilePath) + "\\Room\\mirrorFoV\\" + str(self.lastUESelected) 
+            pickleFilePath_1_new = os.path.join(get_lastFolder("Results"), fix_path(f"Room/mirrorFoV/{self.lastUESelected}") )
             selected_path  = os.path.join(pickleFilePath_1_new, selected_folder, "mirrorRoom.png")
+            print(selected_path)
             if os.path.exists(selected_path):
                 img = mpimg.imread(selected_path)
                 axes[0].imshow(img)

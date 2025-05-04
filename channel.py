@@ -5,8 +5,8 @@ import math_toolkit
 
 NF_mixer = 5
 NF_LNA = 1
-G_LNA = 15
-L_mixer = 4
+G_LNA = 14
+L_mixer = 5
 L_misc = 0
 NF = 6
 

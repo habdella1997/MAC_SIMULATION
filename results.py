@@ -63,7 +63,8 @@ class Results:
         os.makedirs(sub_sub_folder, exist_ok=True)
         sub_sub_sub_folder = os.path.join(sub_sub_folder, str(ue_id))
         os.makedirs(sub_sub_sub_folder, exist_ok=True)
-        np.savetxt(sub_sub_sub_folder + "\\data.txt", data, fmt='%d',)  # Change fmt for desired precision
+        file_txt_path = os.path.join(sub_sub_sub_folder, f"{title}.txt")
+        np.savetxt(file_txt_path, data, fmt='%.6f')  # Change fmt if you want decimal precision
         # Full path for saving the plot
         file_path = os.path.join(sub_sub_sub_folder, plotName)
         plotter.results_create_line_plot(None, data, xlabel, ylabel, title, legend_label, file_path)
@@ -87,40 +88,83 @@ class Results:
         plot.close()
     
     def save_mirrorRoom(self, plot, ueid):
-        sub_sub_folder = os.path.join(self.topLevelFolder, str("Room"))
+        sub_sub_folder = os.path.join(self.topLevelFolder, "Room")
         os.makedirs(sub_sub_folder, exist_ok=True)
-        sub_sub_sub_folder = os.path.join(sub_sub_folder, str("mirrorRoom\\"+str(ueid)))
+
+        sub_sub_sub_folder = os.path.join(sub_sub_folder, "mirrorRoom", str(ueid))
         os.makedirs(sub_sub_sub_folder, exist_ok=True)
-        # Full path for saving the plot
+
+        # Full path for saving the pickled figure
         file_path = os.path.join(sub_sub_sub_folder, "mirrorRoom.pkl")
-        # plot.savefig(file_path)
-        # plot.close()
+
         fig = plot.gcf()  # Get the current figure
         with open(file_path, "wb") as file:
-            pickle.dump(fig,file)
+            pickle.dump(fig, file)
     
-    def save_mirrorFoV(self,plot,ueid,mirror_index):
-        sub_sub_folder = os.path.join(self.topLevelFolder, str("Room"))
+    
+    
+    
+    # def save_mirrorRoom(self, plot, ueid):
+    #     sub_sub_folder = os.path.join(self.topLevelFolder, str("Room"))
+    #     os.makedirs(sub_sub_folder, exist_ok=True)
+    #     sub_sub_sub_folder = os.path.join(sub_sub_folder, str("mirrorRoom\\"+str(ueid)))
+    #     os.makedirs(sub_sub_sub_folder, exist_ok=True)
+    #     # Full path for saving the plot
+    #     file_path = os.path.join(sub_sub_sub_folder, "mirrorRoom.pkl")
+    #     # plot.savefig(file_path)
+    #     # plot.close()
+    #     fig = plot.gcf()  # Get the current figure
+    #     with open(file_path, "wb") as file:
+    #         pickle.dump(fig,file)
+    
+    def save_mirrorFoV(self, plot, ueid, mirror_index):
+        sub_sub_folder = os.path.join(self.topLevelFolder, "Room")
         os.makedirs(sub_sub_folder, exist_ok=True)
-        sub_sub_sub_folder = os.path.join(sub_sub_folder, str("mirrorFoV\\"+str(ueid)))
+
+        sub_sub_sub_folder = os.path.join(sub_sub_folder, "mirrorFoV", str(ueid))
         os.makedirs(sub_sub_sub_folder, exist_ok=True)
-        sub_sub_sub_sub_folder = os.path.join(sub_sub_sub_folder, "mirror_"+(mirror_index))
+
+        sub_sub_sub_sub_folder = os.path.join(sub_sub_sub_folder, f"mirror_{mirror_index}")
         os.makedirs(sub_sub_sub_sub_folder, exist_ok=True)
-        # Full path for saving the plot
-        file_path = os.path.join(sub_sub_sub_sub_folder, "mirrorRoom")
+
+        # Full path for saving the plot (add .png or desired format)
+        file_path = os.path.join(sub_sub_sub_sub_folder, "mirrorRoom.png")
         plot.savefig(file_path)
         plot.close()
+
+    # def save_mirrorFoV(self,plot,ueid,mirror_index):
+    #     sub_sub_folder = os.path.join(self.topLevelFolder, str("Room"))
+    #     os.makedirs(sub_sub_folder, exist_ok=True)
+    #     sub_sub_sub_folder = os.path.join(sub_sub_folder, str("mirrorFoV\\"+str(ueid)))
+    #     os.makedirs(sub_sub_sub_folder, exist_ok=True)
+    #     sub_sub_sub_sub_folder = os.path.join(sub_sub_sub_folder, "mirror_"+(mirror_index))
+    #     os.makedirs(sub_sub_sub_sub_folder, exist_ok=True)
+    #     # Full path for saving the plot
+    #     file_path = os.path.join(sub_sub_sub_sub_folder, "mirrorRoom")
+    #     plot.savefig(file_path)
+    #     plot.close()
     
 
-    def save_AllNLoSSingals(self, plot, ueid,indexer):
-        sub_sub_folder = os.path.join(self.topLevelFolder, str("Room"))
+    def save_AllNLoSSingals(self, plot, ueid, indexer):
+        sub_sub_folder = os.path.join(self.topLevelFolder, "Room")
         os.makedirs(sub_sub_folder, exist_ok=True)
-        sub_sub_sub_folder = os.path.join(sub_sub_folder, str("NLoSAllSignals\\"+str(ueid)))
+
+        sub_sub_sub_folder = os.path.join(sub_sub_folder, "NLoSAllSignals", str(ueid))
         os.makedirs(sub_sub_sub_folder, exist_ok=True)
-        # Full path for saving the plot
-        file_path = os.path.join(sub_sub_sub_folder, "NLoSSignals")
+
+        # Full path for saving the plot (make sure to add an image extension)
+        file_path = os.path.join(sub_sub_sub_folder, "NLoSSignals.png")
         plot.savefig(file_path)
         plot.close()
+    # def save_AllNLoSSingals(self, plot, ueid,indexer):
+    #     sub_sub_folder = os.path.join(self.topLevelFolder, str("Room"))
+    #     os.makedirs(sub_sub_folder, exist_ok=True)
+    #     sub_sub_sub_folder = os.path.join(sub_sub_folder, str("NLoSAllSignals\\"+str(ueid)))
+    #     os.makedirs(sub_sub_sub_folder, exist_ok=True)
+    #     # Full path for saving the plot
+    #     file_path = os.path.join(sub_sub_sub_folder, "NLoSSignals")
+    #     plot.savefig(file_path)
+    #     plot.close()
     
     def savegeneralplot(self,plot,name):
         file_path = os.path.join(self.topLevelFolder, name)
@@ -128,7 +172,7 @@ class Results:
 
     #Saves the latency, data_rate, and throughput of different users in a simulation
 
-    def process_results_generic(self, macResults, PAYLOADSIZE,showPlots=False, savePlots=True):
+    def process_results_generic(self, macResults, PAYLOADSIZE,showPlots=False, savePlots=True): # Verified - Hussam
         user_ids = macResults.results_ueid       
         latencies = macResults.results_latency 
         data_rates = macResults.results_datarate 

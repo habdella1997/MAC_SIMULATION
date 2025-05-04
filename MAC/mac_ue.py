@@ -42,6 +42,9 @@ class macUE:
         self.NLoS_Setup          = [False for x in range(UE.AP.number_of_sectors)]
         self.NLoS_init           = False 
         self.NLoS_SNR            = [None for x in range(UE.AP.number_of_sectors)]
+        self.LoSDataRate         = 0
+        self.LoSSNR              = 0
+        self.LoSDistance         = 0
 
     def update_sector(self):
         # Updates the sector in which UE is in. 
@@ -115,42 +118,57 @@ class macUE:
             RTS_packet = RTS(self.ue_device.id, self.ue_device.AP.id,linkType)
             RTS_packet.setupTransmissionDelay()
             RTS_packet.setupPropagationDelay(self.distanceToAP)
-            p_rx, max_data_rate, SNR, modulation_scheme = -1,-1,-1,None
             RTS_packet.settimeStampTransmission(actual_transmissionTime)
             RTS_packet.settimeStampArrival()
-            if(self.ue_device.RFBox.splitBandwidthValid):
-                p_rx, max_data_rate, SNR, modulation_scheme = channel.link_budget(self.ue_device.RFBox.power, 
+        else:
+            RTS_packet = RTS(self.ue_device.id, self.ue_device.AP.id,linkType)
+            RTS_packet.setupTransmissionDelay()
+            RTS_packet.setupPropagationDelay(self.NLoS_total_distance[currentSector]) #NLoS Distance for RTS Transmission.
+            RTS_packet.settimeStampTransmission(actual_transmissionTime)
+            RTS_packet.settimeStampArrival()
+                
+        active_sectors           = []
+        active_sectors_dataRate  = []
+        active_sectors_Prx       = []
+        active_sectors_modScheme = []
+        LoSDataRate, LoSPrx , LoSModScheme, LoSSNR= 0,0,None,0
+        if(self.ue_device.RFBox.splitBandwidthValid):
+            LoSPrx, LoSDataRate, LoSSNR, LoSModScheme = channel.link_budget(self.ue_device.RFBox.power, 
                                                                                   self.distanceToAP, 
                                                                                   self.ue_device.AP.RFBox.dataBandwidth, 
                                                                                   self.ue_device.RFBox.gain +self.ue_device.AP.RFBox.gain , 
                                                                                   self.ue_device.AP.RFBox.frequency, 
                                                                                   0)
-            else:
-                p_rx, max_data_rate, SNR, modulation_scheme = channel.link_budget(self.ue_device.RFBox.power, 
+        else:
+            LoSPrx, LoSDataRate, LoSSNR, LoSModScheme = channel.link_budget(self.ue_device.RFBox.power, 
                                                                                   self.distanceToAP, 
                                                                                   self.ue_device.AP.RFBox.bandwidth, 
                                                                                   self.ue_device.RFBox.gain +self.ue_device.AP.RFBox.gain , 
                                                                                   self.ue_device.AP.RFBox.frequency, 
                                                                                   0)
+        self.LoSDataRate = LoSDataRate
+        self.LoSSNR = LoSSNR
+        self.LoSDistance = self.distanceToAP
 
-            RTS_packet.setupLinkBudget(p_rx,max_data_rate, modulation_scheme)
-            RTS_packet.setupULDuration(max_data_rate)
-        else:
-            NLoS_Signal_highest   = self.NLoS_Signal[currentSector]
-            max_data_rate_highest = self.NLoS_max_data_rate[currentSector]
-            distance              = self.NLoS_total_distance[currentSector]
-
-            if NLoS_Signal_highest == None or NLoS_Signal_highest.NLoS == 0 or max_data_rate_highest == 0:
-                return RTS_packet
-
-            RTS_packet = RTS(self.ue_device.id, self.ue_device.AP.id,linkType)
-            RTS_packet.setupTransmissionDelay()
-            RTS_packet.setupPropagationDelay(distance)
-            RTS_packet.settimeStampTransmission(actual_transmissionTime)
-            RTS_packet.settimeStampArrival()
-     
-            RTS_packet.setupLinkBudget(self.NLoS_p_rx[currentSector],max_data_rate_highest, self.NLoS_modScheme[currentSector])
-            RTS_packet.setupULDuration(max_data_rate_highest)
+        for activeSector,NLoS_LoS in enumerate(self.NLoS_Signal):
+            if(len(self.NLoS_Signal) != 30):
+                print("NLoS != 30 exit")
+                sys.exit(-1) 
+            if activeSector == self.mySector:
+                if(LoSDataRate == 0):
+                    print("LoS Data Rate is InValid - Bug in MACUE Detected. Exiting Simulation.")
+                    sys.exit(-1)
+                active_sectors.append(activeSector)
+                active_sectors_dataRate.append(LoSDataRate)
+                active_sectors_modScheme.append(LoSModScheme)
+                active_sectors_Prx.append(LoSPrx)
+            else:
+                if(self.NLoS_Signal[activeSector] != None and self.NLoS_max_data_rate[activeSector] > 0 and self.NLoS_Signal[activeSector]!=0):
+                    active_sectors.append(activeSector)
+                    active_sectors_dataRate.append(self.NLoS_max_data_rate[activeSector])
+                    active_sectors_modScheme.append(self.NLoS_modScheme[activeSector])
+                    active_sectors_Prx.append(self.NLoS_p_rx[activeSector])
+        RTS_packet.setupTransmissionWindows(active_sectors, active_sectors_dataRate, active_sectors_Prx, active_sectors_modScheme)
         RTS_packet.numberOfGrantsNeeded = 1
         return RTS_packet
         
@@ -163,9 +181,10 @@ class macUE:
             UL_DATA_PACKET.setupPropagationDelay(self.distanceToAP)
         else:
             if(self.NLoS_max_data_rate[currentSector] == 0):
-                return None, None
+                print("UL Schedueled for an Invalid Sector. Exiting")
+                sys.exit(-1)
             UL_DATA_PACKET.setupPropagationDelay(self.NLoS_total_distance[currentSector])
-        UL_DATA_PACKET.settimeStampTransmission(timeForTransmission)
+        UL_DATA_PACKET.settimeStampTransmission(timeForTransmission,currentSector)
         UL_DATA_PACKET.settimeStampArrival()
         self.ue_device.UE_TRANSMISSIONS.pending_transmission(UL_DATA_PACKET)
         return UL_DATA_PACKET,self.NLoS_Signal[currentSector]
@@ -220,9 +239,7 @@ class macUE:
                     NLoS_Signal_highest = NLoS_Signal
                     total_distance_highest = total_distance
                     break
-        if(max_data_rate_highest==0):
-            print(currentSector)
-            print("SNR: " + str(SNR_Highest))
+
         self.NLoS_max_data_rate[currentSector] = max_data_rate_highest
         self.NLoS_p_rx[currentSector] = p_rx_highest
         self.NLoS_Setup[currentSector] = True
@@ -295,17 +312,22 @@ class macUE:
         for i in range(len(CTS.allocatedTimeSlots)):
             if CTS.allocatedUEID[i] == self.ue_device.id:
                 find_time_slot = CTS.allocatedTimeSlots[i]
-                data_rate_approved = CTS.allocateddataRate[i]
+                #data_rate_approved = CTS.allocateddataRate[i]
                 if(find_time_slot < self.ue_device.UE_TRANSMISSIONS.check_earliest_transmission()):
                     print("Error MAC UE CTS Packet Processing -> Grant Received Prior To UE need for transmission\n")
                     sys.exit(-1)
-                sector_forTransmission = self.ue_device.AP.find_current_sector(sectorStartTime, currentSector, sectorTime, find_time_slot)
+                sector_forTransmission = self.ue_device.AP.get_currentSector(find_time_slot) 
                 linkType = None
+                UL_PACKET, NLoS_Signal = None,None
+                if(self.NLoS_max_data_rate[sector_forTransmission]==0):
+                    print("Sector Picked Is invalid - MAC UE Exiting")
+                    sys.exit(-1)
                 if(sector_forTransmission == self.mySector):
                     linkType = constants.LoS
+                    UL_PACKET, NLoS_Signal = self.create_ULDATA_Packet(linkType,sector_forTransmission,find_time_slot,self.LoSDataRate)
                 else:
                     linkType = constants.NLoS 
-                UL_PACKET, NLoS_Signal = self.create_ULDATA_Packet(linkType,sector_forTransmission,find_time_slot,data_rate_approved)
+                    UL_PACKET, NLoS_Signal = self.create_ULDATA_Packet(linkType,sector_forTransmission,find_time_slot,self.NLoS_max_data_rate[sector_forTransmission])
                 if(UL_PACKET == None):
                     continue
                 UL_PACKETS.append(UL_PACKET)
@@ -329,7 +351,7 @@ class macUE:
                     arrival_time = ACKs.timeStampTransmission + channel.compute_propagationDelay(self.distanceToAP) + ACKs.transmissionDelay
                     ACKs.settimeStampArrival(arrival_time)
                     ACKs.setupPropagationDelay(self.distanceToAP, self.ue_device.id)
-                    timeOfPacketCreation, ul_packet = self.ue_device.transmission_succesful(ACKs.packetsACKED_UELIST[index],currentSector)
+                    timeOfPacketCreation, ul_packet = self.ue_device.transmission_succesful(ACKs.packetsACKED_UELIST[index])
                     latency = arrival_time - timeOfPacketCreation
                     data_rate = ul_packet.dataRate
                     return latency,data_rate
@@ -340,7 +362,7 @@ class macUE:
         data_rate = 0
         arrival_time = 0
         AP_Sector_duringUL = self.ue_device.AP.find_current_sector(sectorStartTime, currentSector, sectorTime, ACKs.timeStampTransmission)
-        timeOfPacketCreation, UL_packet = self.ue_device.transmission_succesful(ACKs.packetsACKED_UELIST[0],AP_Sector_duringUL)
+        timeOfPacketCreation, UL_packet = self.ue_device.transmission_succesful(ACKs.packetsACKED_UELIST[0])
         ack_distance = UL_packet.distance
         arrival_time = ACKs.timeStampTransmission + channel.compute_propagationDelay(ack_distance) + ACKs.transmissionDelay
         latency = arrival_time - timeOfPacketCreation

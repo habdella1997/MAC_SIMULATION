@@ -490,6 +490,7 @@ class MAC_Controller:
                     ueID     = CTS_PACKET.allocatedUEID[indexer]
                     MESSAGES_Logging.append("UE : " + str(ueID) + ", has been alloacted the following time slot: " + str(timeSlot))
         return CTS_PACKET
+    
 
     def setup_UL_packets(self,currentSector, CTS_PACKET,MACUE_devices_withTransmission_Request,MESSAGES_Logging,NLoS_Path_Mapping,sector_start_time,Sector_Time): # Verified - Hussam
         UL_PACKETS   = []
@@ -559,6 +560,7 @@ class MAC_Controller:
         if(self.control_BW != None):
             self.AP.RFBox.splitBandwidth(self.control_BW, self.data_BW)
         MACAP = mac_ap.macAP(self.AP,apSector)
+        MACAP.AP.sectorTime = self.sectorTime
 
         Packet.CONTROL_PACKET_LENGTH = self.controlPacketLength_Encoded 
         Packet.CONTROL_PACKET_RATE   = self.controlPacketTransmissionRate_Encoded
@@ -574,6 +576,7 @@ class MAC_Controller:
         simulation_iteration_counter = 0
         RTS_Failures = 0
         Total_RTS    = 0
+        
         while True:
             utilities.print_status(simulationTotalTimeElapsed,endTime)
             PACKETS_Logging  = []
@@ -649,8 +652,8 @@ class MAC_Controller:
                                                         Sector_Time
                                                         )
 
-            for apSector in APSectors:
-                MAC_Results.add_sector_activity_UL(apSector,1)
+            for apSector_log in range (0,MACAP.AP.number_of_sectors):
+                MAC_Results.add_sector_activity_UL(apSector_log, APSectors.count(apSector_log))
             
             ACK_Packets = self.setup_ACK_packets(UL_PACKETS,MACAP, APSectors)
 
@@ -666,7 +669,6 @@ class MAC_Controller:
                             sys.exit(1)
                         if latency != None and data_rate != None:
                             MAC_Results.add_results(latency,data_rate, MACUE_device.ue_device.id)
-
 
             PACKETS_Logging.append(CTA_PACKET)
             PACKETS_Logging += RTS_PACKETS

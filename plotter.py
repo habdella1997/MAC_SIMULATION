@@ -8,6 +8,7 @@ import Objects.UE as UE
 import math_toolkit
 import random
 import math
+import pandas as pd
 def plot_mirrors(plt, mirrors,mirror_index=-1):
     colors = [
     '#ff6347', '#4682b4', '#aad710', '#8fbc8f', '#ca2a6a',
@@ -371,37 +372,90 @@ def results_plotUEFoV(room, AP, ue_device,mirrors):
     return plt
 
 #plt = plotter.results_plotAllSignals(simulation_room,AP, ue_device, mac_ue_device.NLoS_Signal[sector])
-def results_plotAllSignals(room,AP,ue_device, signals):
-    plt.figure()
-    ax = plt.gca()
-    ax.set_xlim([room.width*-1 , room.width*1 ])
-    ax.set_ylim([room.length*-1 , room.length*1])
+# def results_plotAllSignals(room,AP,ue_device, signals):
+#     plt.figure()
+#     ax = plt.gca()
+#     ax.set_xlim([room.width*-1 , room.width*1 ])
+#     ax.set_ylim([room.length*-1 , room.length*1])
     
-    plot_AP(plt, AP)
-    plot_UE_Device(plt, ue_device)
-    mirrors = []
-    for signal in signals:
-        mirrors.append(signal.mirror)
-        plot_single_UE_links2(plt,signal,ue_device.xCor,AP.xCor)
+#     plot_AP(plt, AP)
+#     plot_UE_Device(plt, ue_device)
+#     mirrors = []
+#     for signal in signals:
+#         mirrors.append(signal.mirror)
+#         plot_single_UE_links2(plt,signal,ue_device.xCor,AP.xCor)
     
-    plot_mirrors(plt, mirrors)
-    colors = [
-    '#ff6347', '#4684b4', '#ffd700', '#7fff00', '#adff2f',
-    '#ff69b4', '#1e90ff', '#ff4500', '#2e8b57', '#ffa07a',
-    '#8a2be2', '#20b2ca', '#dc143c', '#8b4513', '#f08080',
-    '#d2691e', '#c71585', '#ff8c00', '#40e0d0', '#b0e0e6',
-    '#ff7f50', '#9acd32', '#ffa500', '#ff1493', '#9370db',
-    '#6a5acd', '#5f9ea0', '#7b68ee', '#c0c0c0', '#cd5c5c',
-    '#d8bfd8', '#b8860b', '#ffdead', '#00fa9a', '#f5deb3',
-    '#b22222', '#da70d2', '#f4a460', '#ff8c00', '#3cb371',
-    '#ff69b4', '#e6e6fa', '#ffdab9', '#8b0000', '#00008b',
-    '#f0e68c', '#9932cc', '#a0522d', '#8fbc8f', '#4682b4',
-    ]
-    # #random.shuffle(colors)
-    for x in range(0,AP.number_of_sectors):
-        plot_APSector(plt,AP,x,room,1000,colors[x])
-    return plt
+#     plot_mirrors(plt, mirrors)
+#     colors = [
+#     '#ff6347', '#4684b4', '#ffd700', '#7fff00', '#adff2f',
+#     '#ff69b4', '#1e90ff', '#ff4500', '#2e8b57', '#ffa07a',
+#     '#8a2be2', '#20b2ca', '#dc143c', '#8b4513', '#f08080',
+#     '#d2691e', '#c71585', '#ff8c00', '#40e0d0', '#b0e0e6',
+#     '#ff7f50', '#9acd32', '#ffa500', '#ff1493', '#9370db',
+#     '#6a5acd', '#5f9ea0', '#7b68ee', '#c0c0c0', '#cd5c5c',
+#     '#d8bfd8', '#b8860b', '#ffdead', '#00fa9a', '#f5deb3',
+#     '#b22222', '#da70d2', '#f4a460', '#ff8c00', '#3cb371',
+#     '#ff69b4', '#e6e6fa', '#ffdab9', '#8b0000', '#00008b',
+#     '#f0e68c', '#9932cc', '#a0522d', '#8fbc8f', '#4682b4',
+#     ]
+#     # #random.shuffle(colors)
+#     for x in range(0,AP.number_of_sectors):
+#         plot_APSector(plt,AP,x,room,1000,colors[x])
+#     return plt
 
+
+
+def results_plotAllSignals(room, AP, ue_device, signals, SNR_forNLoS, distance_forNLoS, data_rate_forNLos, plot_mode=3):
+    show_plot = plot_mode in [1, 2]
+    show_table = plot_mode in [1, 3]
+
+    fig_height = 12 if show_table and show_plot else 6
+    fig = plt.figure(figsize=(12, fig_height))
+    ax = fig.gca()
+
+    if show_plot:
+        ax.set_xlim([room.width * -1, room.width * 1])
+        ax.set_ylim([room.length * -1, room.length * 1])
+        plot_AP(plt, AP)
+        plot_UE_Device(plt, ue_device)
+
+        for signal in signals:
+            if signal is not None:
+                plot_single_UE_links2(plt, signal, ue_device.xCor, AP.xCor)
+
+        plot_mirrors(plt, [s.mirror for s in signals if s is not None])
+        for x in range(0, AP.number_of_sectors):
+            plot_APSector(plt, AP, x, room, 1000, "lightgray")
+    else:
+        ax.axis("off")  # Hide empty plot if figure not shown
+
+    if show_table:
+        # Table data
+        sector_indices = list(range(AP.number_of_sectors))
+        df = pd.DataFrame({
+            "Sector": sector_indices,
+            "Data Rate [Gbps]": [round(x / 1e9, 3) for x in data_rate_forNLos],
+            "SNR [dB]": [round(x, 2) for x in SNR_forNLoS],
+            "Distance [m]": [round(x, 2) for x in distance_forNLoS]
+        })
+
+        # Table position and size depend on whether plot is shown
+        bbox = [0.05, -0.9, 0.9, 0.75] if show_plot else [0.05, 0.05, 0.9, 0.9]
+
+        table = plt.table(cellText=df.values,
+                          colLabels=df.columns,
+                          cellLoc='center',
+                          loc='bottom',
+                          bbox=bbox,
+                          colColours=["#f2f2f2"] * 4)
+        table.auto_set_font_size(False)
+        table.set_fontsize(10)
+        table.scale(1.2, 1.5)
+
+        if show_plot:
+            plt.subplots_adjust(bottom=0.65)  # Leave room for table
+
+    return plt
 
 
 def plot_AP_setup(AP, room, numberOfSectors,ue_device,NLoS_Signal):
@@ -431,7 +485,7 @@ def plot_AP_setup(AP, room, numberOfSectors,ue_device,NLoS_Signal):
     plot_single_UE_links2(plt,NLoS_Signal,ue_device.xCor, 0)
     return plt
 
-def statistics_plot_sectorUsage(Sector_activity_Data_Uplink):
+def statistics_plot_sectorUsage(Sector_activity_Data_Uplink, title):
     # plot_scrollable_uplink_packets(Sector_activity_Data_Uplink)
     num_sectors = len(Sector_activity_Data_Uplink)
     max_instances = max(len(Sector_activity_Data_Uplink[data]) for data in Sector_activity_Data_Uplink.keys())
@@ -446,7 +500,7 @@ def statistics_plot_sectorUsage(Sector_activity_Data_Uplink):
         ax = axes[sector_idx]
         ax.plot(range(len(sector_data)), sector_data, marker="o", label=f"Sector {sector_idx}")
         ax.set_title(f"Sector {sector_idx}")
-        ax.set_ylabel("Uplink Packets")
+        ax.set_ylabel(title)
         ax.legend(loc="upper left")
         ax.grid(True)
 

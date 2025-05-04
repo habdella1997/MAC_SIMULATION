@@ -47,11 +47,11 @@ class AP:
         return newSector
 
     
-    def get_currentSector(self, time):
-        if(sectorTime > 0):
+    def get_currentSector(self, time): # Verified - Used from MACAP.
+        if(self.sectorTime > 0):
             number_of_sectors = self.number_of_sectors
             sectorTime        = self.sectorTime
-            current_sector    = (math.floor(time / sectorTime) % number_of_sectors) + 1
+            current_sector    = (math.floor(time / sectorTime) % number_of_sectors) 
             self.currentSector = int(current_sector)
             return int(current_sector)
         else:

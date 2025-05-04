@@ -64,14 +64,14 @@ class RTS(Packet):
         self.timeStampTransmission = 0
         self.timeStampArrival = 0 
         self.distanceToAP = 0
-        self.computed_rxPower    = 0
-        self.computed_data_rate  = 0 
-        self.computed_modScheme  = 0 #AP will assigned modulation scheme depending on the MAC Algo
-        self.UplinkTimeSlotDuration = 0
         self.linkType = linkType
         self.numberOfGrantsNeeded = 0
-        self.bobo = []
         self.distance = 0
+        self.UEActiveSectors = []
+        self.UEUPlinkTransmissionTime = []
+        self.dataRateList  = []
+        self.modSchemeList = []
+        self.rxPowerList   = []
     def setupTransmissionDelay(self):
         self.transmissionDelay = channel.compute_transmissionTime(self.length, self.rate)
     def setupPropagationDelay(self, distance):
@@ -81,13 +81,12 @@ class RTS(Packet):
         self.timeStampTransmission = currentTime
     def settimeStampArrival(self):
         self.timeStampArrival = self.timeStampTransmission + self.transmissionDelay + self.propagationDelay 
-
-    def setupLinkBudget(self,rxPower, dataRate, modScheme):
-        self.computed_rxPower = rxPower
-        self.computed_data_rate = dataRate
-        self.computed_modScheme = modScheme
-    def setupULDuration(self, rate):
-        self.UplinkTimeSlotDuration = (Packet.DATA_PACKET_LENGTH / rate)
+    def setupTransmissionWindows(self, sectorList, dataRateList, rxPowerList, modSchemeList):
+        self.UEActiveSectors          = sectorList
+        self.UEUPlinkTransmissionTime = [Packet.DATA_PACKET_LENGTH/x for x in dataRateList]
+        self.dataRateList             = dataRateList
+        self.modSchemeList            = modSchemeList
+        self.rxPowerList              = rxPowerList
 
 class CTS(Packet):
     def __init__(self, sender, apSector):
@@ -99,7 +98,6 @@ class CTS(Packet):
         self.timeStampArrival_UEID = []
         self.allocatedTimeSlots    = [] #Time Slots for UE Transmission
         self.allocatedUEID         = [] #UE IDs of which request to transmit has been accepted. ONLY ue's in this list can transmit... 
-        self.allocateddataRate     = []
         self.ue_linkType           = []
     def setup_recepients(self):
         for id in self.allocatedUEID:
@@ -114,11 +112,11 @@ class CTS(Packet):
         self.timeStampTransmission = currentTime
     def settimeStampArrival(self,time):
         self.timeStampArrival.append(time)
-    def setupTimeSlots(self,timeSlots, allocatedUE,dataRate,linkType_assigned):
+    def setupTimeSlots(self,timeSlots, allocatedUE,linkType_assigned):
         self.allocatedTimeSlots.append(timeSlots)
         self.allocatedUEID.append(allocatedUE)
-        self.allocateddataRate.append(dataRate)
         self.ue_linkType.append(linkType_assigned)
+        
 
 
 class UL_DATA(Packet):
@@ -131,14 +129,16 @@ class UL_DATA(Packet):
         self.dataRate = 0
         self.distance = 0
         self.linkType = linkType
+        self.APSector = -1
     def setupTransmissionDelay(self,rate):
         self.transmissionDelay = channel.compute_transmissionTime(self.length, rate)
         self.dataRate = rate
     def setupPropagationDelay(self, distance):
         self.propagationDelay = channel.compute_propagationDelay(distance)
         self.distance = distance
-    def settimeStampTransmission(self,currentTime):
+    def settimeStampTransmission(self,currentTime,APSector):
         self.timeStampTransmission = currentTime
+        self.APSector = APSector
     def settimeStampArrival(self):
         self.timeStampArrival = self.timeStampTransmission + self.transmissionDelay + self.propagationDelay
         

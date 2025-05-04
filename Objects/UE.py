@@ -102,13 +102,15 @@ class UETransmission:
 
 
 
-    def transmit_success(self, ulPacketSequencID,APSector): # Verified - Hussam
+    def transmit_success(self, ulPacketSequencID): # Verified - Hussam
         match = -1
         ul_packet = None
+        APSector = -1
         for index,ul_packet in enumerate(self.pending_transmission_ULPacket):
             if(ul_packet.sequence_id == ulPacketSequencID):
                 match = index
                 ul_packet = ul_packet
+                APSector = ul_packet.APSector
         if(match == -1):
             print("Processing a Successful Transmission Failed. UL Packet does not exist anymore")
             sys.exit(1)
@@ -193,8 +195,8 @@ class UE:
             return True #There is a packet to transmit
         return False
     
-    def transmission_succesful(self,ulPacketSequencID,APSector): # Verified
-        transmission_time_intiated, UL_packet = self.UE_TRANSMISSIONS.transmit_success(ulPacketSequencID,APSector)
+    def transmission_succesful(self,ulPacketSequencID): # Verified
+        transmission_time_intiated, UL_packet = self.UE_TRANSMISSIONS.transmit_success(ulPacketSequencID)
         return transmission_time_intiated,UL_packet
 
     def connect_to_AP(self, AP):

@@ -143,29 +143,48 @@ class macAP:
         packet_transmission_time = 0
         
         for indexer,packet in enumerate(packets_sorted):
-            packet_transmission_time = packet.UplinkTimeSlotDuration
             ue_recepient             = packet.sender
             prop_delay_ap_to_user    = packet.propagationDelay
             numOfGrantsRequested     = packet.numberOfGrantsNeeded
             transmission_timeSlot    = None
             earliest_grant_Time      = packet.timeStampArrival + packet.propagationDelay + channel.compute_transmissionTime(CTS_Packet.CONTROL_PACKET_LENGTH,CTS_Packet.CONTROL_PACKET_RATE) 
             for grant_index in range(0,numOfGrantsRequested):
-                timeSqueeze = self.find_earliest_available_slot(packet_transmission_time+ prop_delay_ap_to_user, earliest_grant_Time)
+                timeSqueeze = self.find_earliest_available_slot( earliest_grant_Time,packet.UEActiveSectors, packet.UEUPlinkTransmissionTime)
                 if(timeSqueeze != None):
                     transmission_timeSlot = timeSqueeze
+                    if(self.AP.get_currentSector(transmission_timeSlot) not in packet.UEActiveSectors):
+                        print("AP allocating invalid sector-1: ")
+                        sys.exit(-1)
                 else:
+                    AP_pointingSector = None
                     if(earliest_grant_Time < self.ULGrantsAllocationTable_OMNI_end[-1]):
                         transmission_timeSlot = self.ULGrantsAllocationTable_OMNI_end[-1]
+                        transmission_timeSlot, transmission_duration = self.find_earliest_available_slot2(transmission_timeSlot,packet.UEActiveSectors, packet.UEUPlinkTransmissionTime)
+                        if(transmission_timeSlot== None):
+                            print("Error In UL GRANT Schedueling - Exiting")
+                            sys.exit(-1)
+                        if(self.AP.get_currentSector(transmission_timeSlot) not in packet.UEActiveSectors):
+                            print("AP allocating invalid sector-2: ")
+                            sys.exit(-1)
+                        
                     else:
                         transmission_timeSlot = earliest_grant_Time
+                        transmission_timeSlot, transmission_duration = self.find_earliest_available_slot2(transmission_timeSlot,packet.UEActiveSectors, packet.UEUPlinkTransmissionTime)
+                        if(transmission_timeSlot== None ):
+                            print("Error In UL GRANT Schedueling - Exiting")
+                            sys.exit(-1)
+                        if(self.AP.get_currentSector(transmission_timeSlot) not in packet.UEActiveSectors):
+                            print("AP allocating invalid sector-3: ")
+                            sys.exit(-1)
                     self.ULGrantsAllocationTable_OMNI_start.append(transmission_timeSlot)
-                    self.ULGrantsAllocationTable_OMNI_end.append(transmission_timeSlot+packet_transmission_time + prop_delay_ap_to_user)
+                    self.ULGrantsAllocationTable_OMNI_end.append(transmission_timeSlot+transmission_duration )
                 time_slot_assigned       = transmission_timeSlot
                 linkType_assigned        = packet.linkType
-                CTS_Packet.setupTimeSlots(time_slot_assigned, ue_recepient, packet.computed_data_rate ,linkType_assigned)
+
+                CTS_Packet.setupTimeSlots(time_slot_assigned, ue_recepient ,linkType_assigned)
         CTS_Packet.setup_recepients()
         return CTS_Packet
-    
+
 
 
     def plot_time_slots(self, rts_arrival_time, assigned_start, assigned_end):
@@ -204,28 +223,56 @@ class macAP:
         plt.show()
 
 
-    
-    
-    def find_earliest_available_slot(self, packet_transmission_time, earliest_grant_Time): # Verified - Hussam
+    def find_earliest_available_slot(self, earliest_grant_Time, UEActiveSectorList, UETimeDurationList): # Verified - Hussam
         for i in range(len(self.ULGrantsAllocationTable_OMNI_end)-1):
             current_end  = self.ULGrantsAllocationTable_OMNI_end[i]
             next_start   = self.ULGrantsAllocationTable_OMNI_start[i+1]
             time_inBetween = next_start - current_end
             timeSlot_match = None
-            if(time_inBetween >= packet_transmission_time): #found potential match
-                if(current_end >= earliest_grant_Time): # second condition is met
+            AP_pointingSector = self.AP.get_currentSector(current_end)
+            UE_DataRate = None
+            if(AP_pointingSector in UEActiveSectorList and time_inBetween >= UETimeDurationList[UEActiveSectorList.index(AP_pointingSector)]):
+                if(current_end >= earliest_grant_Time): 
                     self.ULGrantsAllocationTable_OMNI_start.insert(i+1,current_end)
-                    self.ULGrantsAllocationTable_OMNI_end.insert(i+1, current_end + packet_transmission_time)
+                    self.ULGrantsAllocationTable_OMNI_end.insert(i+1, current_end + UETimeDurationList[UEActiveSectorList.index(AP_pointingSector)])
                     timeSlot_match = current_end
                     return timeSlot_match
                 else:
-                    time_rewind = next_start - packet_transmission_time
+                    time_rewind = next_start - UETimeDurationList[UEActiveSectorList.index(AP_pointingSector)]
+                    if(self.AP.get_currentSector(time_rewind) not in UEActiveSectorList):
+                        continue
                     if(time_rewind > current_end and time_rewind >= earliest_grant_Time): 
                         timeSlot_match = time_rewind
                         self.ULGrantsAllocationTable_OMNI_start.insert(i+1,time_rewind)
-                        self.ULGrantsAllocationTable_OMNI_end.insert(i+1, time_rewind + packet_transmission_time)
+                        self.ULGrantsAllocationTable_OMNI_end.insert(i+1, time_rewind + UETimeDurationList[UEActiveSectorList.index(AP_pointingSector)])
                         return timeSlot_match
         return None
+    
+    def find_earliest_available_slot2(self,transmission_timeSlot,UEActiveSectors,UEUPlinkTransmissionTime):
+        AP_pointingSector = self.AP.get_currentSector(transmission_timeSlot)
+        if(AP_pointingSector in UEActiveSectors):
+            return transmission_timeSlot, UEUPlinkTransmissionTime[UEActiveSectors.index(AP_pointingSector)]
+        else:
+            sectorTime = self.AP.sectorTime
+            if(sectorTime <= 0):
+                print("Sector Time Not Defined W/ AP Struct. Errors Flagged From MAC AP. Exiting System")
+                sys.exit(-1)
+            new_transmission_time = transmission_timeSlot + sectorTime
+            AP_pointingSector = self.AP.get_currentSector(new_transmission_time)
+            infinite_loop_counter = 0
+            if(len(UEActiveSectors) == 0):
+                print("MAC AP Schedueler, Unable To scheduele UE given no valid connection is setup with AP.Exiting")
+                sys.exit(-1)
+            while(AP_pointingSector not in UEActiveSectors):
+                new_transmission_time += sectorTime # Advacne to the next Sector. 
+                AP_pointingSector = self.AP.get_currentSector(new_transmission_time)
+                infinite_loop_counter += 1
+                if(infinite_loop_counter > (self.AP.number_of_sectors)):
+                    print("Infintite Loop Bug inside MAC AP Finding Slot 2. Exititing System")
+                    sys.exit(-1)
+            return new_transmission_time, UEUPlinkTransmissionTime[UEActiveSectors.index(AP_pointingSector)]
+        return None,None
+
 
     
 
