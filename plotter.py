@@ -403,6 +403,58 @@ def results_plotUEFoV(room, AP, ue_device,mirrors):
 #         plot_APSector(plt,AP,x,room,1000,colors[x])
 #     return plt
 
+def plot_all_links(room, AP, ue_device, signals):
+    """
+    Draw room outline, AP, UE and all possible LoS / NLoS links.
+
+    Returns
+    -------
+    fig, ax : matplotlib Figure and Axes.
+    """
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.set_xlim(room.width * -1, room.width)
+    ax.set_ylim(room.length * -1, room.length)
+
+    plot_AP(plt, AP)
+    plot_UE_Device(plt, ue_device)
+
+    for sig in signals:
+        if sig is not None:
+            plot_single_UE_links2(plt, sig, ue_device.xCor, AP.xCor)
+
+    # mirrors and sectors
+    plot_mirrors(plt, [s.mirror for s in signals if s is not None])
+    for sec in range(AP.number_of_sectors):
+        plot_APSector(plt, AP, sec, room, 1000, "lightgray")
+
+    ax.set_title("All LoS / NLoS Paths")
+    return fig, ax
+
+def table_nlos_metrics(AP,data_rate_Gbps, snr_dB,distance_m):
+    df = pd.DataFrame({
+        "Sector":         range(AP.number_of_sectors),
+        "Data Rate [Gbps]": [round(x/1e9, 3) for x in data_rate_Gbps],
+        "SNR [dB]":         [round(x, 2) for x in snr_dB],
+        "Distance [m]":     [round(x, 2) for x in distance_m]
+    })
+
+    fig, ax = plt.subplots(figsize=(10, 10), dpi=100)
+    ax.axis("off")                       # no axes: just the table
+
+    tbl = plt.table(
+        cellText=df.values,
+        colLabels=df.columns,
+        cellLoc="center",
+        loc="center",
+        colColours=["#f2f2f2"] * 4
+    )
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(15)
+    tbl.scale(1.2, 1.4)
+    ax.set_title("NLoS Sector Metrics", pad=20)
+
+    return fig
+
 
 
 def results_plotAllSignals(room, AP, ue_device, signals, SNR_forNLoS, distance_forNLoS, data_rate_forNLos, plot_mode=3):

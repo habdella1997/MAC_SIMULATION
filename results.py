@@ -155,7 +155,7 @@ class Results:
         # Full path for saving the plot (make sure to add an image extension)
         file_path = os.path.join(sub_sub_sub_folder, "NLoSSignals.png")
         plot.savefig(file_path)
-        plot.close()
+        #plot.close()
     # def save_AllNLoSSingals(self, plot, ueid,indexer):
     #     sub_sub_folder = os.path.join(self.topLevelFolder, str("Room"))
     #     os.makedirs(sub_sub_folder, exist_ok=True)

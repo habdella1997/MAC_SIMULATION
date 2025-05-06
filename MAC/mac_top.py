@@ -692,6 +692,7 @@ class MAC_Controller:
             if simulationTotalTimeElapsed > endTime:
                 break
         print("RTS Failure Rate: " + str((RTS_Failures/Total_RTS)*100))
+        logger.store_packets()
         return MAC_Results, NLoS_Path_Mapping
     
 

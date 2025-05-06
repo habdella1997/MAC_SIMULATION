@@ -3,6 +3,7 @@ import os
 import csv
 from datetime import datetime
 from Objects import transmission2
+import pickle
 class Logger:
     def __init__(self):
          # Move up one directory from current script location
@@ -17,7 +18,14 @@ class Logger:
         sub_folder = os.path.join(logs_dir, timestamp)
         os.makedirs(sub_folder, exist_ok=True)
         self.topLevelFolder = sub_folder
+        self.global_packets = []
     
+    def store_packets(self):
+        pkl_file = os.path.join(self.topLevelFolder, "packetDump.pkl")
+        if not os.path.exists(pkl_file):
+            with open(pkl_file, "wb") as file:
+                pickle.dump(self.global_packets, file)
+                
     def setup_msgTrace(self):
         logMSG = os.path.join(self.topLevelFolder,"actionLog.txt")
         self.logMSG = logMSG
@@ -49,6 +57,7 @@ class Logger:
     def log_packet(self, packet):
         """Logs details of a Packet object to the CSV file."""
         if isinstance(packet, transmission2.Packet):
+            self.global_packets.append(packet)
             # Common fields
             sequence_id = packet.sequence_id
             direction   = packet.linkDirection
@@ -56,7 +65,7 @@ class Logger:
             recipient = packet.recipient
             packet_type = packet.packetType
             transmission_timestamp = packet.timeStampTransmission
-
+            
             # Arrival timestamps and UE IDs (for packets with multiple recipients)
             if hasattr(packet, 'timeStampArrival') and isinstance(packet.timeStampArrival, list):
                 arrival_timestamps = ','.join(map(str, packet.timeStampArrival))
