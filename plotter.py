@@ -366,7 +366,7 @@ def results_plotUEFoV(room, AP, ue_device,mirrors):
     ax.set_ylim([room.length*-1 , room.length*1])
     plot_AP(plt, AP)
     plot_ALL_APSector(plt, AP,room,100)
-    # plot_UE_Device(plt, ue_device)
+    plot_UE_Device(plt, ue_device)
     plot_mirrors(plt, [mirrors])
     plot_FOV(plt,[mirrors])
     return plt

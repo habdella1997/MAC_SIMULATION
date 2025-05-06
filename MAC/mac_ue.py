@@ -45,6 +45,7 @@ class macUE:
         self.LoSDataRate         = 0
         self.LoSSNR              = 0
         self.LoSDistance         = 0
+        self.mirrorUsed          = [None for x in range(UE.AP.number_of_sectors)]
 
     def update_sector(self):
         # Updates the sector in which UE is in. 
@@ -197,6 +198,7 @@ class macUE:
         p_rx_highest, max_data_rate_highest, SNR_Highest,total_distance_highest=  0, 0, 0,0
         NLoS_Signal_highest = None
         modulation_scheme_highest = None
+        mirror_used = None
         if(my_mirrors):
             for mirror in my_mirrors:
                 NLoS_Signal = simRoom.setup_valid_reflection_vectors(self.ue_device,AP,currentSector, mirror)
@@ -238,6 +240,7 @@ class macUE:
                     modulation_scheme_highest = modulation_scheme
                     NLoS_Signal_highest = NLoS_Signal
                     total_distance_highest = total_distance
+                    mirror_used = mirror
                     break
 
         self.NLoS_max_data_rate[currentSector] = max_data_rate_highest
@@ -247,7 +250,7 @@ class macUE:
         self.NLoS_total_distance[currentSector] = total_distance_highest
         self.NLoS_modScheme[currentSector] = modulation_scheme_highest
         self.NLoS_SNR[currentSector] = SNR_Highest
-
+        self.mirrorUsed[currentSector] = mirror_used
     def setupNLoSLinks(self,AP,simRoom):
             for i in range(0, AP.number_of_sectors):
                 if(self.NLoS_Setup[i] == False):

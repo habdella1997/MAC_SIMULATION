@@ -21,7 +21,7 @@ room_l,room_w,room_h = 26.6,26.6,0
 
 # Setup UE Parameters
 UE_TX_Power             = 0.15 #Watts
-maxNumUEDevices         = 1
+maxNumUEDevices         = 50
 UE_Device_Density       = 0.1
 UE_UL_interarrival_time = 200e-6
 UE_BeamWidth = 1
@@ -29,7 +29,7 @@ UE_BeamWidth = 1
 # Setup AP Parameters
 number_AP = 1
 AP_TX_Power = 0.1 #Watts
-AP_BeamWidth = 12
+AP_BeamWidth = 12 
 
 
 #Setup Channel
@@ -140,7 +140,8 @@ else:
         distance_forNLoS  = []
         data_rate_forNLos = []
         for sector in range(0,AP.number_of_sectors):
-            mirrrors = simulation_room.mirrors_with_coverage(ue_device,sector)
+            mirrrors = mac_ue_device.mirrorUsed[sector]
+            mirrrors = [mirrrors]
             plt = plotter.results_plotUEFoV(simulation_room, AP, ue_device,mirrrors[0])
             mirror_indicator = str(sector)
             RESULTS.save_mirrorFoV(plt,ue_device.id,mirror_indicator)
@@ -156,7 +157,7 @@ else:
                 distance_forNLoS.append(mac_ue_device.NLoS_total_distance[sector])
                 SNR_forNLoS.append(mac_ue_device.NLoS_SNR[sector])
         #plt = plotter.results_plotAllSignals(simulation_room,AP, ue_device, NLos_Signals,SNR_forNLoS,distance_forNLoS,data_rate_forNLos)
-        fig = plotter.table_nlos_metrics(AP,data_rate_forNLos, SNR_forNLoS,SNR_forNLoS)
+        fig = plotter.table_nlos_metrics(AP,data_rate_forNLos, SNR_forNLoS,distance_forNLoS)
         RESULTS.save_AllNLoSSingals(fig,ue_device.id,sector)
         plt.close(fig)
     from Logging import ue_logging

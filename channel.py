@@ -44,10 +44,10 @@ def link_budget(p_tx, distance, max_bandwidth, antenna_gain, f_c, abs_loss): #ve
     NF = 10 * math.log10(10 ** (NF_LNA / 10) + (10 ** (NF_mixer / 10) - 1) / 10 ** (G_LNA / 10))
 
 
-    modulation_table =     [ "QPSK"   , "8-PSK"  , "16-QAM" , "64-QAM" ]
-    B_efficiencies = [ 2   , 3  , 4    , 6   ]
-    Eb_N0_min      = [ 10.6, 14 , 14.5 , 18.8]
-
+    modulation_table =     ["BPSK",  "QPSK"   , "8-PSK"  , "16-QAM" , "64-QAM" ]
+    B_efficiencies = [ 1 , 2   , 3  , 4    , 6   ]
+#    Eb_N0_min      = [10.6 10.6, 14 , 14.5 , 18.8]
+    SNR_coded      = [10.6, 12.4, 17.6, 19.2, 25.4]
     data_rate         = None
     max_data_rate     = 0
     modulation_scheme = None
@@ -58,8 +58,8 @@ def link_budget(p_tx, distance, max_bandwidth, antenna_gain, f_c, abs_loss): #ve
     SNR_Computed  = p_rx - (P_n + NF)
 
     for i in range(len(B_efficiencies)):
-        EbNo_computed = SNR_Computed - (10 * math.log10(B_efficiencies[i]))
-        if(EbNo_computed >= Eb_N0_min[i]):
+        #EbNo_computed = SNR_Computed - (10 * math.log10(B_efficiencies[i]))
+        if(SNR_Computed >= SNR_coded[i]):
             data_rate = (max_bandwidth * B_efficiencies[i]) 
             if data_rate > max_data_rate:
                 max_data_rate = data_rate

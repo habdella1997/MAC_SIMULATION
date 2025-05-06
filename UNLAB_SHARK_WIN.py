@@ -371,7 +371,7 @@ class LogViewerApp:
         img_resized = img.resize((300, 300), PIL.Image.LANCZOS)
         self.plot_image = ImageTk.PhotoImage(img_resized)
         
-        # Add the image to the label to display in the plot frame
+        # Add the image to the label to display ingit  the plot frame
         plot_label = tk.Label(self.rightFrame, image=self.plot_image)
         plot_label.pack(fill='both', expand=True)
     

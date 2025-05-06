@@ -29,7 +29,7 @@ class MAC_Controller:
 
     #Packet Params
     CONTROL_PACKET_SIZE  = 24    #bytes
-    CONTROL_PACKET_BEFF  = 2     #bandwidth effeciency for QPSK
+    CONTROL_PACKET_BEFF  = 1     #bandwidth effeciency for QPSK
     PAYLOAD_PACKET_SIZE  = 64000 #bytes
     
     #15/16 Encoding Scheme
@@ -73,7 +73,7 @@ class MAC_Controller:
         self.maxNumUEDevices     = maxNumUEDevices
         self.maxUEXcord          = None
         self.maxUEYcord          = None
-        self.UERandomBackOffTime = 0.1e-6
+        self.UERandomBackOffTime = 0.01e-6
         
         self.reuseSetup          = False #used for allowing simulator to reuse the setup UE from previous simulation (cuts time)
         self.fixedUEObject       = None  #stores the UE objects;
@@ -465,7 +465,7 @@ class MAC_Controller:
                         last_RTS_Packet = None
                         for transmissions in UL_Valid_Transmissions:
                             RTS_PACKET = device.create_RTS_Packet(constants.NLoS,transmissions,MACAP.currentSector,last_RTS_Packet)
-                            if(RTS_PACKET == None or RTS_PACKET.distance < self.d_support):
+                            if(RTS_PACKET == None ):
                                 break
                             if self.blockage:
                                 blockage_prob = channel.compute_propabilityLoS_indoorMixed(RTS_PACKET.distance)
@@ -625,7 +625,10 @@ class MAC_Controller:
             
             MAC_Results.add_collision_RTS(len(RTS_DROPPED),len(RTS_PACKETS) )
             RTS_PACKETS = RTS_SUCCESS
+            
             PROCESSED_RTS_PACKETS = self.handle_RTS_Collisions(RTS_DROPPED, MACUE_devices_withTransmission_Request, sector_start_time+Sector_Time)
+            if len(PROCESSED_RTS_PACKETS) >0:
+                print("Error")
             re_transmission_counter =0
             while(len(PROCESSED_RTS_PACKETS) > 0):
                 re_transmission_counter +=1
