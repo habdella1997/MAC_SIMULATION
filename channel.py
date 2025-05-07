@@ -5,7 +5,7 @@ import math_toolkit
 
 NF_mixer = 5
 NF_LNA = 1
-G_LNA = 14
+G_LNA = 15
 L_mixer = 5
 L_misc = 0
 NF = 6
@@ -42,7 +42,7 @@ def link_budget(p_tx, distance, max_bandwidth, antenna_gain, f_c, abs_loss): #ve
     #NF = 10 * math.log10(10 ** (NF_mixer / 10) + (10 ** (NF_LNA / 10) - 1) / 10 ** (G_LNA / 10))
     
     NF = 10 * math.log10(10 ** (NF_LNA / 10) + (10 ** (NF_mixer / 10) - 1) / 10 ** (G_LNA / 10))
-
+   
 
     modulation_table =     ["BPSK",  "QPSK"   , "8-PSK"  , "16-QAM" , "64-QAM" ]
     B_efficiencies = [ 1 , 2   , 3  , 4    , 6   ]
@@ -53,6 +53,7 @@ def link_budget(p_tx, distance, max_bandwidth, antenna_gain, f_c, abs_loss): #ve
     modulation_scheme = None
 
     P_n  = 10 * math.log10(C.BOLTZMAN * C.T * (max_bandwidth)) + 30 #[dBm]
+    
     p_rx = (p_tx + antenna_gain + G_LNA) - L_total
 
     SNR_Computed  = p_rx - (P_n + NF)

@@ -13,14 +13,14 @@ import MirrorConfigs.Multi_Layer_Mirror_Setup.upperhorizontal as upperhorizontal
 import MirrorConfigs.Multi_Layer_Mirror_Setup.lowerhorizontal as lowerhorizontal 
 
 
-Clean_up.cleanup.delete_old_folders()
+Clean_up.cleanup.delete_old_folders(1)
 
 # Setup Room Parameters
 room_l,room_w,room_h = 26.6,26.6,0
 
 
 # Setup UE Parameters
-UE_TX_Power             = 0.15 #Watts
+UE_TX_Power             = 0.2 #Watts
 maxNumUEDevices         = 50
 UE_Device_Density       = 0.1
 UE_UL_interarrival_time = 200e-6
@@ -76,15 +76,16 @@ MACSIMULATION.maxUEYcord = 15
 
 MACSIMULATION.blockage = False
 
-plot_avg_tput = 0
+plot_avg_tput = 1
 RESULTS = results.Results()
 
 
 if (plot_avg_tput):
     avg_tput_data = []
-    inter_arrival_time = [x for x in range(100,1400,300)]
+    inter_arrival_time = [x for x in range(100,1050,50)]
     for i,iat in enumerate(inter_arrival_time):
-        system_time   = [x*time_scale  for x in range(0,100 + int(iat*0.4))]
+        endTime = 100 + int(0.05*iat)
+        system_time   = [x*time_scale  for x in range(0,endTime)]
         startTime = int(len(system_time) * 0.2)
         if(i > 0):
             MACSIMULATION.reuseSetup = True
@@ -98,7 +99,7 @@ if (plot_avg_tput):
                                                             AP_TX_Power,
                                                             txFrequency, 
                                                             iat*1e-6,
-                                                            system_time[startTime-1], # System Start Time
+                                                            system_time[1], # System Start Time
                                                             system_time[-1], # System End Time
                                                             Logging,
                                                             mirrors)
@@ -107,7 +108,7 @@ if (plot_avg_tput):
         avg_tput_data.append(avg_tput)
     plotter.results_create_line_plot( inter_arrival_time,avg_tput_data, "Inter-Arrival Time [us]", "Avg. Tput [Gbps]", "Tput Fixed Node Density 0.05 nodes/m^2", None,"OMNIResults")
 else:
-    system_time   = [x*time_scale  for x in range(0,500)]#200 + int(UE_UL_interarrival_time*0.4))]
+    system_time   = [x*time_scale  for x in range(0,100)]#200 + int(UE_UL_interarrival_time*0.4))]
     startTime = int(len(system_time) * 0.02)
     MAC_Results,NLoSReflections = MACSIMULATION.setupMAC(number_AP, 
                                                          UE_Device_Density, 
@@ -117,7 +118,7 @@ else:
                                                          AP_TX_Power,
                                                          txFrequency, 
                                                          UE_UL_interarrival_time,
-                                                         system_time[1], # System Start Time
+                                                         system_time[5], # System Start Time
                                                          system_time[-1], # System End Time
                                                          Logging,
                                                          mirrors) 

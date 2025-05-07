@@ -1,0 +1,45 @@
+function max_distances = max_distance_by_modulation(p_tx_mW, max_bandwidth, antenna_gain, f_c, abs_loss_dB)
+    % Constants
+    SPEED_OF_LIGHT = 3e8;          % m/s
+    BOLTZMAN = 1.38064852e-23;     % J/K
+    T = 290;                       % K
+
+    % Hardware gain/loss parameters [dB]
+    G_LNA = 0;
+    NF_LNA = 0;
+    NF_mixer = 5;
+    L_mixer = 5;
+    L_misc = 0;
+
+    % Modulation schemes
+    modulation_table = ["BPSK", "QPSK", "8-PSK", "16-QAM", "64-QAM"];
+    SNR_required = [10.6, 12.4, 17.6, 19.2, 25.4];  % [dB]
+
+    % Convert inputs
+    p_tx = 10 * log10(p_tx_mW);  % dBm
+    lambda = SPEED_OF_LIGHT / f_c;
+
+    % Total noise figure
+    NF = 10 * log10(10^(NF_LNA / 10) + (10^(NF_mixer / 10) - 1) / 10^(G_LNA / 10));
+
+    % Total noise power
+    P_n = 10 * log10(BOLTZMAN * T * max_bandwidth) + 30;  % dBm
+
+    % Constant loss part (excluding spreading)
+    L_fixed = 2 * L_mixer + L_misc + abs_loss_dB;
+
+    max_distances = zeros(size(modulation_table));
+
+    for i = 1:length(SNR_required)
+        snr_min = SNR_required(i);
+
+        exponent = (p_tx + antenna_gain + G_LNA - (P_n + NF) - snr_min - L_fixed) / 20;
+        d_max = (lambda / (4 * pi)) * 10^exponent;
+        max_distances(i) = d_max;
+    end
+
+    % Show table
+    T = table(modulation_table', SNR_required', round(max_distances', 3), ...
+        'VariableNames', {'Modulation', 'SNR_required_dB', 'MaxDistance_m'});
+    disp(T)
+end

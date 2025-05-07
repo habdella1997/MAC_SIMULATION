@@ -29,7 +29,7 @@ class MAC_Controller:
 
     #Packet Params
     CONTROL_PACKET_SIZE  = 24    #bytes
-    CONTROL_PACKET_BEFF  = 1     #bandwidth effeciency for QPSK
+    CONTROL_PACKET_BEFF  = 2     #bandwidth effeciency for QPSK
     PAYLOAD_PACKET_SIZE  = 64000 #bytes
     
     #15/16 Encoding Scheme
@@ -134,18 +134,18 @@ class MAC_Controller:
                 break
             if(success):
                 packets_success.append(packet)
-                MESSAGES_Logging.append("Packet ( " + packet.linkType + " )" + packet.packetType + "with seq id: " + str(packet.sequence_id)+ " occured no collision")
-                MESSAGES_Logging.append("UE device: " + str(packet.sender) + " sent Packet w/ no collision")
+                # MESSAGES_Logging.append("Packet ( " + packet.linkType + " )" + packet.packetType + "with seq id: " + str(packet.sequence_id)+ " occured no collision")
+                # MESSAGES_Logging.append("UE device: " + str(packet.sender) + " sent Packet w/ no collision")
             else:
                 if(sender == sender_next_packet):
                     print(packet.packetType)
                     print("UE colliding w/ itself bug present")
                     sys.exit(1)
                 packets_dropped.append(packet)
-                MESSAGES_Logging.append("Packet ( " + packet.linkType + " )" + packet.packetType +"  with seq id: " + str(packet.sequence_id) +", "+ str(next_packet.sequence_id) +"has been dropped due to collision")
-                MESSAGES_Logging.append("UE device: " + str(packet.sender) + ", and UE Device: " + str(next_packet.sender) + " sent Packets that collided with one another")
-                MESSAGES_Logging.append("First Packet Transmission and Arrival Times are: " + str(packet.timeStampTransmission) + ", " +str(packet.timeStampArrival))
-                MESSAGES_Logging.append("First Packet Transmission and Arrival Times are: " + str(next_packet.timeStampTransmission) + ", " +str(next_packet.timeStampArrival))
+                # MESSAGES_Logging.append("Packet ( " + packet.linkType + " )" + packet.packetType +"  with seq id: " + str(packet.sequence_id) +", "+ str(next_packet.sequence_id) +"has been dropped due to collision")
+                # MESSAGES_Logging.append("UE device: " + str(packet.sender) + ", and UE Device: " + str(next_packet.sender) + " sent Packets that collided with one another")
+                # MESSAGES_Logging.append("First Packet Transmission and Arrival Times are: " + str(packet.timeStampTransmission) + ", " +str(packet.timeStampArrival))
+                # MESSAGES_Logging.append("First Packet Transmission and Arrival Times are: " + str(next_packet.timeStampTransmission) + ", " +str(next_packet.timeStampArrival))
         return packets_dropped,packets_success
         
     def setup_devices_previous_run(self, AP, UE_List, transmission_rate):
@@ -418,15 +418,15 @@ class MAC_Controller:
                 if(ue_device_sector == MACAP.currentSector): #LoS Condition 
                     CTA_PACKET.addRecepients(device.ue_device.id)
                     device.process_CTA_packet(CTA_PACKET)
-                    MESSAGES_Logging.append("LoS CTA Received by UE: " + str(device.ue_device.id) + 
-                                            " sitting at sector: " + str(ue_device_sector) +
-                                            " at time: " + str(device.lastCTA_ArrivalTime) + 
-                                            ", at sector " + str(MACAP.currentSector))
+                    # MESSAGES_Logging.append("LoS CTA Received by UE: " + str(device.ue_device.id) + 
+                    #                         " sitting at sector: " + str(ue_device_sector) +
+                    #                         " at time: " + str(device.lastCTA_ArrivalTime) + 
+                    #                         ", at sector " + str(MACAP.currentSector))
                     if(device.check_Transmission_Capbaility(sectorEndTime,MACAP.currentSector,constants.LoS,MACAP,simRoom,MESSAGES_Logging)):
-                        MESSAGES_Logging.append("UE has something to transmit")
+                        # MESSAGES_Logging.append("UE has something to transmit")
                         MACUE_devices_withTransmission_Request.append(device)
                         UL_Valid_Transmissions = device.ue_device.check_number_packets(sectorEndTime)
-                        MESSAGES_Logging.append("Packet Time slots that pass the time criteria: "+ str(' '.join(map(str, UL_Valid_Transmissions))))
+                        # MESSAGES_Logging.append("Packet Time slots that pass the time criteria: "+ str(' '.join(map(str, UL_Valid_Transmissions))))
                         last_RTS_Packet = None
                         requests_made = 0
                         for transmissions in UL_Valid_Transmissions:
@@ -446,7 +446,7 @@ class MAC_Controller:
                             else:
                                 RTS_PACKET = device.create_RTS_Packet(constants.LoS,transmissions,MACAP.currentSector,last_RTS_Packet)
                                 last_RTS_Packet = RTS_PACKET
-                                MESSAGES_Logging.append("RTS PACKET created with seq id: " + str(RTS_PACKET.sequence_id))
+                                # MESSAGES_Logging.append("RTS PACKET created with seq id: " + str(RTS_PACKET.sequence_id))
                                 if self.blockage:
                                     blockage_prob = channel.compute_propabilityLoS_indoorMixed(RTS_PACKET.distance)
                                     threshold_pr  = math_toolkit.random_uniform_between(0,1)
@@ -459,7 +459,7 @@ class MAC_Controller:
             for device in MAC_UEDEVICES: 
                     if(device.check_Transmission_Capbaility(sectorEndTime,MACAP.currentSector,constants.NLoS,MACAP,simRoom,MESSAGES_Logging)):
                         device.process_CTA_packet(CTA_PACKET) #Not actually receiving a CTA, but need it to flush the MACUE system-removing this will impact the MAC ue NloS Transmission time           
-                        MESSAGES_Logging.append("NLoS For UE ID: " + str(device.ue_device.id) + "and has something to transmit")        
+                        # MESSAGES_Logging.append("NLoS For UE ID: " + str(device.ue_device.id) + "and has something to transmit")        
                         MACUE_devices_withTransmission_Request.append(device)
                         UL_Valid_Transmissions = device.ue_device.check_number_packets(sectorEndTime)
                         last_RTS_Packet = None
@@ -473,7 +473,7 @@ class MAC_Controller:
                                 if(threshold_pr <= blockage_prob):
                                     continue
                             last_RTS_Packet = RTS_PACKET
-                            MESSAGES_Logging.append("RTS PACKET created with seq id: " + str(RTS_PACKET.sequence_id)) 
+                            # MESSAGES_Logging.append("RTS PACKET created with seq id: " + str(RTS_PACKET.sequence_id)) 
                             RTS_PACKETS.append(RTS_PACKET)
                     else:
                         pass
@@ -539,8 +539,8 @@ class MAC_Controller:
                 
 
     def macOmni(self, logger:Logger, endTime):
-        print("MAC-OMNILLUSION Simulation Has Began - Good Luck :) ")
-        print("Simulation End Time: " + str(endTime))
+        # print("MAC-OMNILLUSION Simulation Has Began - Good Luck :) ")
+        # print("Simulation End Time: " + str(endTime))
         
         Sector_Time         = self.sectorTime
         apSector            = self.AP_STARTING_SECTOR
@@ -578,14 +578,14 @@ class MAC_Controller:
         Total_RTS    = 0
         
         while True:
-            utilities.print_status(simulationTotalTimeElapsed,endTime)
+            #utilities.print_status(simulationTotalTimeElapsed,endTime)
             PACKETS_Logging  = []
             MESSAGES_Logging = [] 
             sector_start_time = simulationTotalTimeElapsed
             
-            MESSAGES_Logging.append("Simulation Iteration Number: " + str(simulation_iteration_counter))
-            MESSAGES_Logging.append("Current Time: " + str(sector_start_time))
-            MESSAGES_Logging.append("AP is pointing at Sector: " + str(MACAP.currentSector))
+            # MESSAGES_Logging.append("Simulation Iteration Number: " + str(simulation_iteration_counter))
+            # MESSAGES_Logging.append("Current Time: " + str(sector_start_time))
+            # MESSAGES_Logging.append("AP is pointing at Sector: " + str(MACAP.currentSector))
 
             # ASK AP to create the CTA Packet and time-stamp it
             CTA_PACKET = MACAP.create_CTA_Packet(simulationTotalTimeElapsed,MACAP.currentSector)
@@ -614,30 +614,30 @@ class MAC_Controller:
             RTS_PACKETS = RTS_PACKETS_LoS + RTS_PACKETS_NLoS
             MACUE_devices_withTransmission_Request = MACUE_devices_withTransmission_Request_LoS + MACUE_devices_withTransmission_Request_NLoS
             
-            MAC_Results.add_sector_activity_RTS(MACAP.currentSector, len(RTS_PACKETS))
+            # MAC_Results.add_sector_activity_RTS(MACAP.currentSector, len(RTS_PACKETS))
             
             # Now we have all the RTS PACKETS. Lets drop the ones with collisions 
             RTS_DROPPED,RTS_SUCCESS = self.collision_detection_ul(RTS_PACKETS,MESSAGES_Logging)
             RTS_Failures += len(RTS_DROPPED)
             Total_RTS    += len(RTS_PACKETS)
             
-            MESSAGES_Logging.append("Total RTS Packets: " + str(len(RTS_PACKETS)) + ", Dropped RTS packets: " + str(len(RTS_DROPPED)))
+            # MESSAGES_Logging.append("Total RTS Packets: " + str(len(RTS_PACKETS)) + ", Dropped RTS packets: " + str(len(RTS_DROPPED)))
             
-            MAC_Results.add_collision_RTS(len(RTS_DROPPED),len(RTS_PACKETS) )
+            # MAC_Results.add_collision_RTS(len(RTS_DROPPED),len(RTS_PACKETS) )
             RTS_PACKETS = RTS_SUCCESS
             
             PROCESSED_RTS_PACKETS = self.handle_RTS_Collisions(RTS_DROPPED, MACUE_devices_withTransmission_Request, sector_start_time+Sector_Time)
-            if len(PROCESSED_RTS_PACKETS) >0:
-                print("Error")
             re_transmission_counter =0
             while(len(PROCESSED_RTS_PACKETS) > 0):
                 re_transmission_counter +=1
+                if(re_transmission_counter>4):
+                    print(re_transmission_counter)
                 RTS_PACKETS = RTS_PACKETS + PROCESSED_RTS_PACKETS
                 RTS_DROPPED,RTS_SUCCESS = self.collision_detection_ul(RTS_PACKETS,MESSAGES_Logging)
                 MAC_Results.add_collision_RTS(len(RTS_DROPPED),len(RTS_PACKETS) )
                 RTS_PACKETS = RTS_SUCCESS
-                MESSAGES_Logging.append("Re-Transmission Attempt: " + str(re_transmission_counter))
-                MESSAGES_Logging.append("Total RTS Packets: " + str(len(RTS_PACKETS)) + ", Dropped RTS packets: " + str(len(RTS_DROPPED)))  
+                # MESSAGES_Logging.append("Re-Transmission Attempt: " + str(re_transmission_counter))
+                # MESSAGES_Logging.append("Total RTS Packets: " + str(len(RTS_PACKETS)) + ", Dropped RTS packets: " + str(len(RTS_DROPPED)))  
                 PROCESSED_RTS_PACKETS = self.handle_RTS_Collisions(RTS_DROPPED,MACUE_devices_withTransmission_Request,sector_start_time+Sector_Time)
 
             CTS_PACKET = self.setup_CTS_packets(RTS_PACKETS,
@@ -655,35 +655,35 @@ class MAC_Controller:
                                                         Sector_Time
                                                         )
 
-            for apSector_log in range (0,MACAP.AP.number_of_sectors):
-                MAC_Results.add_sector_activity_UL(apSector_log, APSectors.count(apSector_log))
+            # for apSector_log in range (0,MACAP.AP.number_of_sectors):
+            #     MAC_Results.add_sector_activity_UL(apSector_log, APSectors.count(apSector_log))
             
             ACK_Packets = self.setup_ACK_packets(UL_PACKETS,MACAP, APSectors)
 
             for MACUE_device in MACUE_devices_withTransmission_Request:
                 for ACK_Packet in ACK_Packets:
                     if(MACUE_device.ue_device.id == ACK_Packet.ueIDlist[0]):
-                        MESSAGES_Logging.append("UEID : "+str(MACUE_device.ue_device.id) + "has receieved an ACK")
+                        # MESSAGES_Logging.append("UEID : "+str(MACUE_device.ue_device.id) + "has receieved an ACK")
                         latency, data_rate = MACUE_device.process_ACK_packet_NLoS(ACK_Packet,sector_start_time,MACAP.currentSector,Sector_Time)
-                        MESSAGES_Logging.append("Latency For Transaction: " + str(latency))
-                        MESSAGES_Logging.append("Tput for transaction: " + str((self.dataPacketLength_Encoded / latency)/1e9))
+                        # MESSAGES_Logging.append("Latency For Transaction: " + str(latency))
+                        # MESSAGES_Logging.append("Tput for transaction: " + str((self.dataPacketLength_Encoded / latency)/1e9))
                         if(latency < 0 ):
                             print("Latency Error less than 0")
                             sys.exit(1)
                         if latency != None and data_rate != None:
                             MAC_Results.add_results(latency,data_rate, MACUE_device.ue_device.id)
 
-            PACKETS_Logging.append(CTA_PACKET)
-            PACKETS_Logging += RTS_PACKETS
-            PACKETS_Logging.append(CTS_PACKET)
-            PACKETS_Logging += UL_PACKETS
-            PACKETS_Logging+=(ACK_Packets)
-            logger.log_action(MESSAGES_Logging)
+            # PACKETS_Logging.append(CTA_PACKET)
+            # PACKETS_Logging += RTS_PACKETS
+            # PACKETS_Logging.append(CTS_PACKET)
+            # PACKETS_Logging += UL_PACKETS
+            # PACKETS_Logging+=(ACK_Packets)
+            # logger.log_action(MESSAGES_Logging)
             
-            for packet in PACKETS_Logging:
-                if(packet == None):
-                    continue
-                logger.log_packet(packet)
+            # for packet in PACKETS_Logging:
+            #     if(packet == None):
+            #         continue
+            #     logger.log_packet(packet)
 
             simulationTotalTimeElapsed += Sector_Time 
             
@@ -695,7 +695,7 @@ class MAC_Controller:
             if simulationTotalTimeElapsed > endTime:
                 break
         print("RTS Failure Rate: " + str((RTS_Failures/Total_RTS)*100))
-        logger.store_packets()
+        # logger.store_packets()
         return MAC_Results, NLoS_Path_Mapping
     
 
